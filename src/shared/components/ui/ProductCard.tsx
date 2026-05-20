@@ -10,17 +10,18 @@ type ProductCardProps = {
 export function ProductCard({ product }: ProductCardProps) {
   return (
     <Card className="group flex h-full flex-col overflow-hidden p-0">
-      <div className="h-52 overflow-hidden">
+      <div className="h-52 overflow-hidden relative">
         <img
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           src={product.image}
           alt={product.name}
           loading="lazy"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.28)] via-transparent to-transparent opacity-50 pointer-events-none" />
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
-        <p className="text-xs uppercase tracking-[0.2em] text-cyan">{product.category}</p>
-        <h3 className="font-display text-xl font-semibold text-pearl">{product.name}</h3>
+        <p className="text-xs uppercase tracking-[0.2em] text-rose-500">{product.category}</p>
+        <h3 className="font-display text-xl font-semibold text-rose-700">{product.name}</h3>
         <p className="text-sm text-mist">{product.description}</p>
         <p className="rounded-2xl border border-rose-200/70 bg-rose-50/80 p-3 text-xs text-pearl/90">{product.reason}</p>
         <a href={product.externalLink} target="_blank" rel="noreferrer" className="mt-auto">

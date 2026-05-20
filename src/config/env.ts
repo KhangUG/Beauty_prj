@@ -1,9 +1,11 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const allowGuestScans = import.meta.env.VITE_ALLOW_GUEST_SCANS === 'true'
 
 export const env = {
   supabaseUrl,
   supabaseAnonKey,
+  allowGuestScans,
   isSupabaseConfigured: Boolean(supabaseUrl && supabaseAnonKey),
 }
 

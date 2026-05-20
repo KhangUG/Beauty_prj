@@ -18,12 +18,12 @@ export function AnimatedNavbar() {
 
   return (
     <motion.header
-      className="sticky top-4 z-40 section-shell"
+      className="fixed left-0 right-0 top-0 z-50 section-shell"
       initial={{ opacity: 0, y: -18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.45, ease: [0.2, 0.9, 0.3, 1] }}
     >
-      <div className="glass-panel flex flex-wrap items-center justify-between gap-4 rounded-full px-5 py-3">
+      <div className="glass-panel flex flex-wrap items-center justify-between gap-4 rounded-full px-5 py-3 shadow-[0_24px_70px_rgba(168,112,134,0.16)]">
         <NavLink to="/" className="flex items-center gap-2 font-display text-sm font-semibold tracking-[0.18em] text-pearl">
           <Sparkles className="h-4 w-4 text-cyan" />
           LUMINA AI

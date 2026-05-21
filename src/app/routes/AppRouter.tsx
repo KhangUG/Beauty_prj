@@ -11,6 +11,8 @@ const ProductsPage = lazy(() => import('@/features/products/pages/ProductsPage')
 const AuthPage = lazy(() => import('@/features/auth/pages/AuthPage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const AdminPage = lazy(() => import('@/features/admin/pages/AdminPage'))
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'))
+const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'))
 
 const router = createBrowserRouter([
   {
@@ -22,6 +24,8 @@ const router = createBrowserRouter([
       { path: '/recommendations', element: <RecommendationsPage /> },
       { path: '/products', element: <ProductsPage /> },
       { path: '/auth', element: <AuthPage /> },
+      { path: '/auth/verify', element: <VerifyEmailPage /> },
+      { path: '/auth/reset-password', element: <ResetPasswordPage /> },
       {
         path: '/dashboard',
         element: (
@@ -33,7 +37,7 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         element: (
-          <ProtectedRoute requireAdmin>
+          <ProtectedRoute allowedRoles={['admin']}>
             <AdminPage />
           </ProtectedRoute>
         ),

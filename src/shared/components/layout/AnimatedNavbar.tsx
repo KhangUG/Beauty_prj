@@ -14,7 +14,11 @@ const navItems = [
 ]
 
 export function AnimatedNavbar() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin } = useAuth()
+
+  const visibleNavItems = isAdmin
+    ? [...navItems, { to: '/admin', label: 'Admin' }]
+    : navItems
 
   return (
     <motion.header
@@ -29,7 +33,7 @@ export function AnimatedNavbar() {
           LUMINA AI
         </NavLink>
         <nav className="flex flex-wrap items-center gap-2 text-xs">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

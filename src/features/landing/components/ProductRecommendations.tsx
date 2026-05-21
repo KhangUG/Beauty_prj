@@ -1,8 +1,27 @@
+import { useQuery } from '@tanstack/react-query'
 import { ScanProductGrid } from '@/shared/components/ui/ScanProductGrid'
 import { mockProducts } from '@/shared/data/mock-products'
+import { databaseService } from '@/services/supabase/database-service'
+import { type ProductRecommendation } from '@/shared/lib/types'
 
 export default function ProductRecommendations() {
-  const products = mockProducts.slice(0, 6)
+  const { data } = useQuery({
+    queryKey: ['landing', 'products'],
+    queryFn: async () => databaseService.getProducts(),
+  })
+
+  const products: ProductRecommendation[] = (data && data.length
+    ? data.map((product) => ({
+        id: product.id,
+        name: product.name,
+        image: product.image_url,
+        description: product.description,
+        reason: `Featured because it fits ${product.tags.join(', ') || 'core skincare'} needs.`,
+        externalLink: product.external_url,
+        category: product.tags[0] ?? 'skincare',
+      }))
+    : mockProducts
+  ).slice(0, 6)
   const featured = products[0]
 
   return (

@@ -5,6 +5,7 @@ import { authService } from '@/features/auth/services/auth-service'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
+import { getAdminRole } from '@/shared/lib/admin'
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
@@ -17,13 +18,16 @@ export default function AuthPage() {
   const authMutation = useMutation({
     mutationFn: async () => {
       if (mode === 'signin') {
-        await authService.signIn(email, password)
+        return authService.signIn(email, password)
       } else {
-        await authService.signUp(email, password)
+        return authService.signUp(email, password)
       }
     },
-    onSuccess: () => {
-      navigate(from, { replace: true })
+    onSuccess: (result) => {
+      const signedInUser = result?.user ?? result?.session?.user
+      const isAdmin = Boolean(getAdminRole(signedInUser ?? null))
+
+      navigate(mode === 'signin' && isAdmin ? '/admin' : from, { replace: true })
     },
   })
 

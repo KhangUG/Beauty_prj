@@ -1,5 +1,16 @@
 create extension if not exists pgcrypto;
 
+create or replace function public.is_admin_user()
+returns boolean
+language sql
+stable
+as $$
+  select
+    coalesce(lower(auth.jwt() -> 'app_metadata' ->> 'role'), '') in ('admin', 'superadmin')
+    or coalesce(lower(auth.jwt() -> 'user_metadata' ->> 'role'), '') in ('admin', 'superadmin')
+    or lower(coalesce(auth.jwt() ->> 'email', '')) like '%admin%'
+$$;
+
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -46,11 +57,25 @@ for select
 to authenticated
 using (true);
 
+create policy "products manageable by admin"
+on public.products
+for all
+to authenticated
+using (public.is_admin_user())
+with check (public.is_admin_user());
+
 create policy "scans selectable by owner"
 on public.scans
 for select
 to authenticated
 using (auth.uid() = user_id);
+
+create policy "scans manageable by admin"
+on public.scans
+for all
+to authenticated
+using (public.is_admin_user())
+with check (public.is_admin_user());
 
 create policy "scans insertable by owner"
 on public.scans
@@ -83,3 +108,10 @@ with check (
       and s.user_id = auth.uid()
   )
 );
+
+create policy "recommendations manageable by admin"
+on public.recommendations
+for all
+to authenticated
+using (public.is_admin_user())
+with check (public.is_admin_user());

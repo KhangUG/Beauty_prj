@@ -20,6 +20,7 @@ Production-ready React + Vite frontend with a cinematic UI and a Supabase-backed
 ```bash
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ADMIN_EMAILS=admin@yourdomain.com,ops@yourdomain.com
 ```
 
 The app now requires these env vars at startup.

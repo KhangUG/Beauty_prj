@@ -47,9 +47,6 @@ export function parseProductTags(product: AdminProductRecord): ParsedProduct {
     }
   }
 
-  if (product.price !== null && product.price !== undefined) {
-    price = `$${Number(product.price).toFixed(2)}`
-  }
 
   // Capitalize category
   if (category) {

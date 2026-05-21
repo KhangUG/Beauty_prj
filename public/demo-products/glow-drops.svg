@@ -1,0 +1,18 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF0F1"/>
+      <stop offset="0.55" stop-color="#FF9AB1"/>
+      <stop offset="1" stop-color="#9F2744"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="690" cy="180" r="120" fill="white" fill-opacity="0.14"/>
+  <circle cx="210" cy="710" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="304" y="226" width="292" height="416" rx="146" fill="white" fill-opacity="0.88"/>
+  <rect x="358" y="158" width="184" height="90" rx="30" fill="#FFFFFF" fill-opacity="0.95"/>
+  <circle cx="450" cy="450" r="114" fill="#FF7D9D"/>
+  <circle cx="412" cy="418" r="10" fill="white" opacity="0.8"/>
+  <circle cx="486" cy="484" r="10" fill="white" opacity="0.8"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="50" font-weight="800" fill="white" letter-spacing="6">NIACIN</text>
+</svg>

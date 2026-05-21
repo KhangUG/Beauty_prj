@@ -1,172 +1,305 @@
+import { Suspense, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { fadeInUp, staggerContainer } from '@/animations/motion'
-import { Button } from '@/shared/components/ui/Button'
-import { Card } from '@/shared/components/ui/Card'
-import { RecommendationGrid } from '@/shared/components/ui/RecommendationGrid'
-import { mockProducts } from '@/shared/data/mock-products'
-
-const features = [
-  {
-    title: 'Deep Skin Analytics',
-    description: 'Instant metric extraction for acne, hydration, oiliness, and dark circles.',
-  },
-  {
-    title: 'AI-Native Recommendations',
-    description: 'Every product suggestion includes confidence-backed reasoning for your skin profile.',
-  },
-  {
-    title: 'Supabase-Ready Platform',
-    description: 'Architecture prepared for auth, image storage, scan history, and product catalogs.',
-  },
-]
-
-const testimonials = [
-  { name: 'Mina, Product Designer', text: 'Feels like Apple Health for skin with a Banuba-level wow moment.' },
-  { name: 'Ravi, Growth Lead', text: 'The scan-to-recommendation path is smooth, cinematic, and trust-building.' },
-  { name: 'Julia, Founder', text: 'Luxury interface, startup speed, and clear AI explanations in one product.' },
-]
-
-function SectionHeader({ eyebrow, title, caption }: { eyebrow: string; title: string; caption: string }) {
-  return (
-    <div className="mb-8 max-w-2xl">
-      <p className="text-xs uppercase tracking-[0.28em] text-cyan">{eyebrow}</p>
-      <h2 className="mt-3 font-display text-3xl font-semibold text-pearl md:text-4xl">{title}</h2>
-      <p className="mt-3 text-mist">{caption}</p>
-    </div>
-  )
-}
+import gsap from 'gsap'
+import ScrollTrigger from 'gsap/ScrollTrigger'
+import Lenis from '@studio-freight/lenis'
+import Hero from '@/features/landing/components/Hero'
+import SceneCanvas from '@/features/landing/components/SceneCanvas'
+import AIScanner from '@/features/landing/components/AIScanner'
+import ProductRecommendations from '@/features/landing/components/ProductRecommendations'
+import DashboardPreview from '@/features/landing/components/DashboardPreview'
+import Testimonials from '@/features/landing/components/Testimonials'
 
 export default function LandingPage() {
+  const pageRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger)
+
+    const lenis = new Lenis({
+      duration: 1.15,
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.5,
+    })
+
+    const raf = (time: number) => {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    const ctx = gsap.context(() => {
+      gsap.from('[data-hero-reveal]', {
+        opacity: 0,
+        y: 24,
+        filter: 'blur(10px)',
+        duration: 1.1,
+        stagger: 0.08,
+        ease: 'power3.out',
+      })
+
+      gsap.utils.toArray<HTMLElement>('[data-reveal]').forEach((section, index) => {
+        gsap.fromTo(
+          section,
+          { opacity: 0, y: 28, filter: 'blur(14px)' },
+          {
+            opacity: 1,
+            y: 0,
+            filter: 'blur(0px)',
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 82%',
+              end: 'top 30%',
+              toggleActions: 'play none none reverse',
+            },
+            delay: index * 0.03,
+          },
+        )
+      })
+
+      gsap.to('[data-parallax-orb]', {
+        yPercent: -12,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: pageRef.current,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 0.8,
+        },
+      })
+    }, pageRef)
+
+    return () => {
+      ctx.revert()
+      lenis.destroy()
+      ScrollTrigger.getAll().forEach((trigger) => trigger.kill())
+    }
+  }, [])
+
   return (
-    <div className="space-y-24 pb-16">
-      <section className="section-shell pt-10 md:pt-16">
-        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid gap-8 lg:grid-cols-[1.1fr,0.9fr]">
-          <motion.div variants={fadeInUp} className="space-y-6">
-            <p className="text-xs uppercase tracking-[0.32em] text-cyan">Cinematic AI Skin Studio</p>
-            <h1 className="font-display text-5xl font-extrabold leading-[1.05] text-pearl md:text-7xl">
-              Your Luxury <span className="text-cyan">Beauty Intelligence</span> Layer
-            </h1>
-            <p className="max-w-xl text-lg text-mist">
-              Upload a selfie, run an AI skin scan, and receive precision skincare recommendations in under a minute.
+    <main ref={pageRef} className="min-h-screen overflow-x-hidden bg-[#fbf6f2] text-rose-950">
+      <section className="relative overflow-hidden border-b border-black/5 bg-[linear-gradient(180deg,#fff7f4_0%,#fbf6f2_100%)]">
+        <div data-parallax-orb className="absolute inset-0 -z-20 opacity-80 blur-3xl">
+          <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,174,201,0.55),rgba(255,174,201,0.05)_70%,transparent_72%)]" />
+          <div className="absolute left-[10%] top-[48%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,236,242,0.95),rgba(255,236,242,0.06)_68%,transparent_72%)]" />
+        </div>
+
+        <div className="absolute inset-0 -z-10 opacity-70">
+          <Suspense fallback={null}>
+            <SceneCanvas />
+          </Suspense>
+        </div>
+
+        <div className="mx-auto grid min-h-[calc(100vh-1rem)] w-full max-w-[1720px] grid-cols-1 gap-4 px-3 py-3 lg:grid-cols-[1.08fr,0.92fr] lg:px-4 lg:py-4 xl:px-5">
+          <div className="flex min-h-[44rem] flex-col justify-between rounded-[1.75rem] border border-black/5 bg-white/65 p-5 shadow-[0_30px_80px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8 xl:p-10">
+            <div data-hero-reveal>
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-rose-500">THE DIGITAL BEAUTY WORLD WAS BUILT FOR NOISE.</p>
+              <h1 className="mt-5 max-w-4xl font-display text-6xl font-black leading-[0.92] tracking-[-0.05em] text-rose-950 sm:text-7xl xl:text-[7rem]">
+                WE’RE REBUILDING IT FOR <span className="text-rose-500">CLARITY.</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-rose-700 lg:text-xl">
+                A premium AI beauty experience with cinematic motion, luxury product curation, and blocks that read like an editorial homepage.
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button className="rounded-full bg-rose-600 px-6 py-3 font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-110">
+                Start AI Scan
+              </button>
+              <button className="rounded-full border border-rose-200 bg-white/80 px-6 py-3 font-semibold text-rose-800">
+                View Our Work
+              </button>
+            </div>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {[
+                ['Skin Score', '86'],
+                ['Hydration', 'High'],
+                ['Match', '98%'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-3xl border border-black/5 bg-white/80 p-4 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-rose-500">{label}</p>
+                  <p className="mt-2 text-3xl font-black text-rose-950">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 self-stretch">
+            <div className="overflow-hidden rounded-[1.75rem] border border-black/5 bg-white/75 shadow-[0_30px_80px_rgba(163,93,107,0.08)] backdrop-blur-xl">
+              <div className="border-b border-black/5 px-6 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-rose-500">LIVE FEATURE</p>
+              </div>
+              <img src="/luxury-demo.svg" alt="Luxury beauty product" className="h-[min(34rem,48vh)] w-full object-cover" />
+              <div className="border-t border-black/5 p-5 lg:p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-500">Featured Product</p>
+                <div className="mt-2 flex items-end justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-3xl font-semibold text-rose-950">Rose Quartz Serum</h2>
+                    <p className="mt-1 max-w-xl text-sm text-rose-700">Hydrate, glow, and smooth with a luminous finish.</p>
+                  </div>
+                  <p className="text-right text-lg font-semibold text-rose-900">$68</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-black/5 bg-[linear-gradient(135deg,rgba(255,255,255,0.75),rgba(255,243,246,0.85))] p-5 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-rose-500">OUR WORK</p>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-rose-700">
+                A modular layout inspired by editorial tech pages: bold statements, large image blocks, and clear sections that feel premium instead of busy.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <motion.section
+        data-reveal
+        className="mx-auto w-full max-w-[1720px] border-b border-black/5 px-3 py-6 lg:px-4 xl:px-5"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.7 }}
+      >
+        <div className="grid gap-4 lg:grid-cols-[0.85fr,1.15fr]">
+          <div className="rounded-[1.75rem] border border-black/5 bg-white/80 p-5 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">AI SKIN SCANNER</p>
+            <h2 className="mt-4 font-display text-4xl font-black tracking-[-0.04em] text-rose-950 lg:text-5xl">Upload. Analyze. Recommend.</h2>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-rose-700">
+              A single full-width block gives the scanner room to breathe, like the big editorial panels you see on premium brand sites.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/scan">
-                <Button size="lg">Start AI Scan</Button>
-              </Link>
-              <Link to="/recommendations">
-                <Button variant="ghost" size="lg">
-                  See Recommendations
-                </Button>
-              </Link>
+            <div className="mt-6 rounded-[1.5rem] border border-dashed border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
+              Scroll through the sections below to see the product blocks, dashboard block, and social proof block.
             </div>
-          </motion.div>
-          <motion.div variants={fadeInUp} className="glass-panel rounded-[2rem] p-6 md:p-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-cyan">Live AI Demo</p>
-            <div className="mt-5 overflow-hidden rounded-3xl border border-white/15">
-              <img
-                src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1400&q=80"
-                alt="AI beauty demo"
-                className="h-72 w-full object-cover"
-              />
+          </div>
+
+          <div className="rounded-[1.75rem] border border-black/5 bg-white/75 p-3 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-5">
+            <AIScanner />
+          </div>
+        </div>
+      </motion.section>
+
+      <motion.section
+        data-reveal
+        className="mx-auto w-full max-w-[1720px] border-b border-black/5 px-3 py-6 lg:px-4 xl:px-5"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.7, delay: 0.05 }}
+      >
+        <div className="rounded-[1.75rem] border border-black/5 bg-white/80 p-5 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">OUR WORK</p>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-4xl font-black tracking-[-0.04em] text-rose-950 lg:text-6xl">Smart product recommendations</h2>
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-rose-700">
+                This block now behaves like a major editorial section: one strong heading, one supporting line, then the product wall.
+              </p>
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
-              <Card className="p-4">
-                <p className="text-mist">Skin Score</p>
-                <p className="mt-1 font-display text-3xl text-cyan">86</p>
-              </Card>
-              <Card className="p-4">
-                <p className="text-mist">AI Confidence</p>
-                <p className="mt-1 font-display text-3xl text-amber">97%</p>
-              </Card>
-            </div>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      <section className="section-shell">
-        <SectionHeader
-          eyebrow="AI Demo"
-          title="Upload. Analyze. Recommend."
-          caption="A smooth intelligence pipeline that translates visual skin cues into clear action plans."
-        />
-        <div className="grid gap-4 md:grid-cols-3">
-          {['Upload Selfie', 'AI Skin Scan', 'Personalized Products'].map((step, index) => (
-            <Card key={step} className="relative overflow-hidden p-6">
-              <p className="font-display text-4xl text-rose-200/80">0{index + 1}</p>
-              <h3 className="mt-4 font-display text-xl text-pearl">{step}</h3>
-              <p className="mt-2 text-sm text-mist">Engineered with motion-forward interactions and startup-grade clarity.</p>
-            </Card>
-          ))}
+          </div>
+          <div className="mt-6 rounded-[1.5rem] border border-black/5 bg-rose-50/70 p-3 lg:p-4">
+            <ProductRecommendations />
+          </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="section-shell">
-        <SectionHeader
-          eyebrow="Features"
-          title="Built Like a Real AI Startup Product"
-          caption="Modular frontend architecture with premium visuals and scalable service boundaries."
-        />
-        <div className="grid gap-4 md:grid-cols-3">
-          {features.map((feature) => (
-            <Card key={feature.title} className="p-6">
-              <h3 className="font-display text-xl text-pearl">{feature.title}</h3>
-              <p className="mt-3 text-sm text-mist">{feature.description}</p>
-            </Card>
-          ))}
+      <motion.section
+        data-reveal
+        className="mx-auto w-full max-w-[1720px] border-b border-black/5 px-3 py-6 lg:px-4 xl:px-5"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.7, delay: 0.1 }}
+      >
+        <div className="grid gap-4 lg:grid-cols-[1fr,0.8fr]">
+          <div className="rounded-[1.75rem] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,245,248,0.82))] p-5 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">TECHNOLOGY MADE YOU THE PRODUCT.</p>
+            <h2 className="mt-4 max-w-4xl font-display text-5xl font-black leading-[0.94] tracking-[-0.05em] text-rose-950 lg:text-7xl">
+              LET’S MAKE YOU THE OWNER.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-rose-700">
+              The dashboard block stays intentionally wide and calm, like the best startup websites: a statement, then proof.
+            </p>
+          </div>
+
+          <div className="rounded-[1.75rem] border border-black/5 bg-white/75 p-3 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-5">
+            <DashboardPreview />
+          </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="section-shell">
-        <SectionHeader
-          eyebrow="Showcase"
-          title="Smart Product Recommendations"
-          caption="Every suggestion includes why it matches your current skin profile."
-        />
-        <RecommendationGrid products={mockProducts.slice(0, 3)} />
-      </section>
-
-      <section className="section-shell">
-        <SectionHeader
-          eyebrow="Testimonials"
-          title="Loved by Product Teams and Beauty Creators"
-          caption="Early teams use LUMINA AI to speed up personalization and user trust."
-        />
-        <div className="grid gap-4 md:grid-cols-3">
-          {testimonials.map((item) => (
-            <Card key={item.name} className="p-6">
-              <p className="text-sm text-pearl">"{item.text}"</p>
-              <p className="mt-4 text-xs uppercase tracking-[0.16em] text-cyan">{item.name}</p>
-            </Card>
-          ))}
+      <motion.section
+        data-reveal
+        className="mx-auto w-full max-w-[1720px] border-b border-black/5 px-3 py-6 lg:px-4 xl:px-5"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 0.7, delay: 0.15 }}
+      >
+        <div className="rounded-[1.75rem] border border-black/5 bg-white/80 p-5 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">THE TEAM</p>
+          <h2 className="mt-4 font-display text-4xl font-black tracking-[-0.04em] text-rose-950 lg:text-6xl">Loved by product teams and beauty creators</h2>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-rose-700">
+            This section now reads like a wide editorial block with soft social proof, not a row of same-sized cards.
+          </p>
+          <div className="mt-6 rounded-[1.5rem] border border-black/5 bg-rose-50/70 p-3 lg:p-4">
+            <Testimonials />
+          </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="section-shell">
-        <Card className="rounded-[2rem] p-8 md:p-10">
-          <p className="text-xs uppercase tracking-[0.26em] text-cyan">Start Building Glow Intelligence</p>
-          <h2 className="mt-4 max-w-3xl font-display text-4xl font-bold text-pearl md:text-5xl">
+      <section className="mx-auto w-full max-w-[1720px] px-3 py-6 lg:px-4 xl:px-5">
+        <div className="rounded-[1.75rem] border border-black/5 bg-rose-600 px-5 py-7 text-white shadow-[0_24px_60px_rgba(163,93,107,0.18)] lg:px-10 lg:py-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/80">JOIN US</p>
+          <h2 className="mt-4 max-w-4xl font-display text-4xl font-black leading-[0.94] tracking-[-0.05em] sm:text-5xl lg:text-7xl">
             Turn one selfie into a complete AI skincare routine.
           </h2>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/scan">
-              <Button size="lg">Launch Scan</Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="accent" size="lg">
-                Create Account
-              </Button>
-            </Link>
+            <button className="rounded-full bg-white px-6 py-3 font-semibold text-rose-900">Launch Scan</button>
+            <button className="rounded-full border border-white/30 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-sm">Create Account</button>
           </div>
-        </Card>
+        </div>
       </section>
 
-      <footer className="section-shell text-sm text-mist">
-        <div className="glass-panel rounded-3xl p-6">
-          <p className="font-display text-pearl">LUMINA AI Beauty Platform</p>
-          <p className="mt-2">Built for cinematic personalization with React, Framer Motion, Supabase, Zustand, and TanStack Query.</p>
+      <footer className="mx-auto w-full max-w-[1720px] px-3 pb-8 pt-2 lg:px-4 xl:px-5 lg:pb-10">
+        <div className="rounded-[1.75rem] border border-black/5 bg-white/75 px-5 py-6 shadow-[0_24px_60px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:px-8 lg:py-8">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">LUMINA AI</p>
+              <p className="mt-3 text-sm leading-relaxed text-rose-700">
+                Luxury AI beauty experience for scans, recommendations, and skincare discovery.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+              {[
+                ['Explore', ['Home', 'AI Scan', 'Recommendations']],
+                ['Company', ['About', 'Careers', 'Contact']],
+                ['Resources', ['Products', 'Dashboard', 'Support']],
+                ['Follow', ['Instagram', 'Pinterest', 'TikTok']],
+              ].map(([title, items]) => (
+                <div key={title as string}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-rose-500">{title as string}</p>
+                  <ul className="mt-3 space-y-2 text-sm text-rose-700">
+                    {(items as string[]).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 border-t border-black/5 pt-5 text-xs text-rose-500 sm:flex-row sm:items-center sm:justify-between">
+            <p>© 2026 Lumina AI. All rights reserved.</p>
+            <p>Designed for a full-screen luxury storefront feel.</p>
+          </div>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }

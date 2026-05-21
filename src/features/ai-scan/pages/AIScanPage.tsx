@@ -176,8 +176,8 @@ export default function AIScanPage() {
 
           {/* Right: image preview + result metrics side by side */}
           <div className="flex flex-1 gap-4 items-start">
-            {/* Thumbnail preview */}
-            <div className="h-40 w-36 shrink-0 overflow-hidden rounded-2xl border border-rose-200/70 bg-velvet">
+            {/* Thumbnail preview (increased size) */}
+            <div className="h-52 w-44 shrink-0 overflow-hidden rounded-2xl border border-rose-200/70 bg-velvet">
               {webcamOpen ? (
                 <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
               ) : imagePreview ? (
@@ -199,8 +199,8 @@ export default function AIScanPage() {
                   <AIResultCard key={item.metric} metric={item.metric} score={item.score} status={item.status} insight={item.insight} />
                 ))}
               </div>
-            ) : (
-              <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-rose-100 text-xs text-mist/50 h-40">
+              ) : (
+                <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-rose-100 text-xs text-mist/50 h-52">
                 Scan results will appear here
               </div>
             )}
@@ -209,39 +209,39 @@ export default function AIScanPage() {
       </Card>
 
       {/* ── Product Recommendations (always visible, prominent) ── */}
-      <motion.div
-        className="space-y-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
-      >
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] text-cyan font-bold">Đề xuất Routine Cá nhân hóa</p>
-            <h2 className="mt-1 font-display text-2xl font-extrabold text-pearl md:text-3xl">
-              Precision-Matched Skincare
-            </h2>
-            <p className="mt-1 text-xs text-mist max-w-2xl">
-              {phase === 'complete'
-                ? 'Công thức được tối ưu từ chỉ số sinh học da của bạn. Nhấn nút để mua trực tiếp tại đối tác.'
-                : 'Sản phẩm phổ biến được AI tuyển chọn. Quét da để nhận đề xuất cá nhân hóa.'}
-            </p>
-          </div>
-          <Link to="/recommendations" className="hidden md:block shrink-0">
-            <Button variant="ghost" size="sm" className="text-xs">Xem tất cả →</Button>
-          </Link>
-        </div>
-
-        <Card className="p-5 bg-white/30 backdrop-blur-md border border-rose-200/45">
-          {loadingProducts ? (
-            <div className="flex h-32 items-center justify-center text-sm text-mist font-semibold">
-              Đang chuẩn bị sản phẩm phù hợp...
+      {phase === 'complete' ? (
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
+        >
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-cyan font-bold">Personalized Routine</p>
+              <h2 className="mt-1 font-display text-2xl font-extrabold text-pearl md:text-3xl">
+                Precision-Matched Skincare
+              </h2>
+              <p className="mt-1 text-xs text-mist max-w-2xl">
+                Product suggestions tailored to your skin scan. Click a product to buy from our partners.
+              </p>
             </div>
-          ) : (
-            <ScanProductGrid products={displayProducts} />
-          )}
-        </Card>
-      </motion.div>
+            <Link to="/recommendations" className="hidden md:block shrink-0">
+              <Button variant="ghost" size="sm" className="text-xs">View all →</Button>
+            </Link>
+          </div>
+
+          <Card className="p-5 bg-white/30 backdrop-blur-md border border-rose-200/45">
+            {loadingProducts ? (
+              <div className="flex h-32 items-center justify-center text-sm text-mist font-semibold">
+                Preparing matching products...
+              </div>
+            ) : (
+              <ScanProductGrid products={displayProducts} />
+            )}
+          </Card>
+        </motion.div>
+      ) : null}
 
       <Modal
         open={showOnboarding}

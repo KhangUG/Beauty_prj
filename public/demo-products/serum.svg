@@ -1,0 +1,22 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="128" y1="106" x2="760" y2="804" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE4EC"/>
+      <stop offset="0.55" stop-color="#F7A7C0"/>
+      <stop offset="1" stop-color="#8F2E5E"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="325" y1="220" x2="575" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFF4F7" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="700" cy="180" r="120" fill="white" fill-opacity="0.18"/>
+  <circle cx="200" cy="730" r="160" fill="white" fill-opacity="0.12"/>
+  <rect x="286" y="210" width="328" height="480" rx="164" fill="url(#glass)"/>
+  <rect x="360" y="150" width="180" height="96" rx="30" fill="#FFFFFF" fill-opacity="0.9"/>
+  <rect x="382" y="128" width="136" height="42" rx="21" fill="#7A2247"/>
+  <path d="M416 286C416 268.327 430.327 254 448 254H452C469.673 254 484 268.327 484 286V520C484 537.673 469.673 552 452 552H448C430.327 552 416 537.673 416 520V286Z" fill="#FFB7CC"/>
+  <path d="M386 392C386 374.327 400.327 360 418 360H482C499.673 360 514 374.327 514 392V586C514 603.673 499.673 618 482 618H418C400.327 618 386 603.673 386 586V392Z" fill="#FFFFFF" fill-opacity="0.72"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="54" font-weight="800" fill="white" letter-spacing="8">SERUM</text>
+</svg>

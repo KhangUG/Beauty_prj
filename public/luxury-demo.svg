@@ -1,0 +1,47 @@
+<svg width="1200" height="1600" viewBox="0 0 1200 1600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="1600" rx="80" fill="url(#bg)"/>
+  <circle cx="360" cy="300" r="220" fill="url(#orb1)" fill-opacity="0.9"/>
+  <circle cx="900" cy="420" r="260" fill="url(#orb2)" fill-opacity="0.85"/>
+  <circle cx="780" cy="980" r="280" fill="url(#orb3)" fill-opacity="0.7"/>
+  <g filter="url(#shadow)">
+    <rect x="440" y="330" width="320" height="860" rx="160" fill="rgba(255,255,255,0.58)" stroke="rgba(255,255,255,0.7)" stroke-width="8"/>
+    <rect x="480" y="250" width="240" height="140" rx="70" fill="rgba(255,255,255,0.76)"/>
+    <rect x="520" y="430" width="160" height="500" rx="80" fill="url(#glass)"/>
+    <path d="M520 720C520 632.843 591.843 561 679 561H680V870C680 958.777 608.777 1030 520 1030V720Z" fill="url(#liquid)" fill-opacity="0.9"/>
+    <rect x="520" y="990" width="160" height="120" rx="60" fill="rgba(255,255,255,0.82)"/>
+    <circle cx="560" cy="540" r="16" fill="#ffffff" fill-opacity="0.85"/>
+  </g>
+  <text x="80" y="1410" fill="#4f2d3a" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="700" letter-spacing="10">LUMINA AI</text>
+  <text x="84" y="1485" fill="#7b5a66" font-family="Arial, Helvetica, sans-serif" font-size="32" letter-spacing="6">LUXURY BEAUTY INTELLIGENCE</text>
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 800) rotate(90) scale(900 620)">
+      <stop stop-color="#fffdfc"/>
+      <stop offset="0.45" stop-color="#ffe6ec"/>
+      <stop offset="1" stop-color="#f8d6df"/>
+    </radialGradient>
+    <radialGradient id="orb1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 300) rotate(90) scale(220)">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffd3df" stop-opacity="0.1"/>
+    </radialGradient>
+    <radialGradient id="orb2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(900 420) rotate(90) scale(260)">
+      <stop stop-color="#fff7fb"/>
+      <stop offset="1" stop-color="#ffb7cb" stop-opacity="0.08"/>
+    </radialGradient>
+    <radialGradient id="orb3" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(780 980) rotate(90) scale(280)">
+      <stop stop-color="#fff9f6"/>
+      <stop offset="1" stop-color="#ffd8bd" stop-opacity="0.07"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="520" y1="430" x2="680" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="rgba(255,255,255,0.92)"/>
+      <stop offset="0.5" stop-color="rgba(255,241,247,0.55)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,0.72)"/>
+    </linearGradient>
+    <linearGradient id="liquid" x1="520" y1="561" x2="680" y2="1030" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff0f5"/>
+      <stop offset="1" stop-color="#f3b7c8"/>
+    </linearGradient>
+    <filter id="shadow" x="250" y="140" width="700" height="1250" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="40" stdDeviation="60" flood-color="#d18498" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+</svg>

@@ -4,7 +4,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p1',
     name: 'Luminous Barrier Serum',
-    image: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/serum.svg',
     description: 'Barrier-repair serum with ceramides and lightweight peptides.',
     reason: 'Hydration signal is strong but acne sensitivity suggests non-comedogenic barrier support.',
     externalLink: 'https://www.sephora.com',
@@ -13,7 +13,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p2',
     name: 'Cloud Balance Gel Cleanser',
-    image: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/cleanser.svg',
     description: 'Low-foam cleanser to remove excess sebum without stripping moisture.',
     reason: 'Oiliness metric indicates midday shine; this cleanser helps reset the skin film.',
     externalLink: 'https://www.ulta.com',
@@ -22,7 +22,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p3',
     name: 'Aurora Caffeine Eye Veil',
-    image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/eye-care.svg',
     description: 'Cooling eye treatment with caffeine and niacinamide.',
     reason: 'Dark-circle score suggests vascular fatigue; caffeine helps de-puff and brighten.',
     externalLink: 'https://www.dermstore.com',
@@ -31,7 +31,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p4',
     name: 'Night Recovery Microcream',
-    image: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/moisturizer.svg',
     description: 'Peptide-rich overnight cream for elasticity and moisture retention.',
     reason: 'Boosting overnight recovery may increase skin score consistency over time.',
     externalLink: 'https://www.amazon.com',
@@ -40,7 +40,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p5',
     name: 'Glow Renewal Toner',
-    image: 'https://images.unsplash.com/photo-1590439471364-192aa70c0b53?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/toner.svg',
     description: 'AHA/PHA toner that refines pores and brightens skin tone.',
     reason: 'Dull tone and uneven texture from oiliness respond well to gentle chemical exfoliation.',
     externalLink: 'https://www.sephora.com',
@@ -49,7 +49,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p6',
     name: 'Solar Shield SPF 50+',
-    image: 'https://images.unsplash.com/photo-1625093899721-63f44ebe7b11?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/spf.svg',
     description: 'Lightweight mineral sunscreen with antioxidant-rich formula.',
     reason: 'UV protection is essential for skin repair and maintaining skin score gains.',
     externalLink: 'https://www.ulta.com',
@@ -58,7 +58,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p7',
     name: 'Retinol Revival Elixir',
-    image: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/retinol.svg',
     description: 'Micro-encapsulated retinol blend for gentle but effective cell turnover.',
     reason: 'Skin score gains accelerate with consistent retinol use at low concentrations.',
     externalLink: 'https://www.dermstore.com',
@@ -67,7 +67,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p8',
     name: 'Hydro Mist Essence',
-    image: 'https://images.unsplash.com/photo-1526758097130-bab247274f58?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/essence.svg',
     description: 'Hyaluronic acid mist for instant all-day hydration boost.',
     reason: 'Hydration fluctuations seen in your scan benefit from mid-day misting.',
     externalLink: 'https://www.amazon.com',
@@ -76,7 +76,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p9',
     name: 'Niacinamide Glow Drops',
-    image: 'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/glow-drops.svg',
     description: '10% niacinamide serum to minimize pores and even skin tone.',
     reason: 'Excess sebum and acne prone zones benefit from niacinamide sebum regulation.',
     externalLink: 'https://www.sephora.com',
@@ -85,7 +85,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p10',
     name: 'Probiotic Skin Balancer',
-    image: 'https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/probiotic.svg',
     description: 'Fermented probiotic formula to restore microbiome balance.',
     reason: 'Skin microbiome support reduces inflammation markers seen in your scan.',
     externalLink: 'https://www.ulta.com',
@@ -94,7 +94,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p11',
     name: 'Vitamin C Brightening Mask',
-    image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/mask.svg',
     description: 'Intensive vitamin C and glutathione brightening wash-off mask.',
     reason: 'Dark circles and dull zones respond well to weekly vitamin C treatment.',
     externalLink: 'https://www.dermstore.com',
@@ -103,7 +103,7 @@ export const mockProducts: ProductRecommendation[] = [
   {
     id: 'p12',
     name: 'Peptide Eye Firming Serum',
-    image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=900&q=80',
+    image: '/demo-products/peptide.svg',
     description: 'Triple-peptide formula that firms and lifts the delicate eye area.',
     reason: 'Under-eye dark circle score improves with consistent peptide stimulation.',
     externalLink: 'https://www.amazon.com',

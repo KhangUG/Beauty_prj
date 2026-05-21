@@ -1,0 +1,19 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6E8FF"/>
+      <stop offset="0.55" stop-color="#C79BFF"/>
+      <stop offset="1" stop-color="#5E2D91"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="690" cy="190" r="120" fill="white" fill-opacity="0.14"/>
+  <circle cx="210" cy="710" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="310" y="240" width="280" height="420" rx="140" fill="white" fill-opacity="0.82"/>
+  <rect x="355" y="182" width="190" height="82" rx="28" fill="#FFFFFF" fill-opacity="0.92"/>
+  <path d="M360 420C418 366 488 366 545 420" stroke="#7D3FC7" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="398" cy="470" r="16" fill="#7D3FC7"/>
+  <circle cx="502" cy="470" r="16" fill="#7D3FC7"/>
+  <path d="M418 576C441 592 459 598 481 598C503 598 521 592 544 576" stroke="#7D3FC7" stroke-width="22" stroke-linecap="round"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="800" fill="white" letter-spacing="5">EYE CARE</text>
+</svg>

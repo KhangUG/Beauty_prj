@@ -1,0 +1,16 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E3FBFF"/>
+      <stop offset="0.55" stop-color="#8BE4F0"/>
+      <stop offset="1" stop-color="#116D85"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="170" cy="180" r="100" fill="white" fill-opacity="0.14"/>
+  <circle cx="740" cy="720" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="322" y="214" width="256" height="420" rx="128" fill="white" fill-opacity="0.88"/>
+  <rect x="358" y="152" width="184" height="94" rx="30" fill="#FFFFFF" fill-opacity="0.95"/>
+  <path d="M450 316C494 370 522 414 522 470C522 527 488 580 450 580C412 580 378 527 378 470C378 414 406 370 450 316Z" fill="#76DDED"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="50" font-weight="800" fill="white" letter-spacing="6">ESSENCE</text>
+</svg>

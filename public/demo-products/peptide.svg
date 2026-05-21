@@ -1,0 +1,17 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4EDFF"/>
+      <stop offset="0.55" stop-color="#C2A7FF"/>
+      <stop offset="1" stop-color="#6E39B5"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="170" cy="180" r="100" fill="white" fill-opacity="0.14"/>
+  <circle cx="740" cy="720" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="316" y="220" width="268" height="426" rx="134" fill="white" fill-opacity="0.88"/>
+  <rect x="356" y="156" width="188" height="92" rx="30" fill="#FFFFFF" fill-opacity="0.95"/>
+  <path d="M450 330C492 374 522 416 522 470C522 526 486 578 450 578C414 578 378 526 378 470C378 416 408 374 450 330Z" fill="#B68CFF"/>
+  <path d="M414 452C436 432 464 432 486 452" stroke="#6E39B5" stroke-width="18" stroke-linecap="round"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="800" fill="white" letter-spacing="6">PEPTIDE</text>
+</svg>

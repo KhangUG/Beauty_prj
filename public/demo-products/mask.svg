@@ -1,0 +1,18 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8DE"/>
+      <stop offset="0.55" stop-color="#FFE26F"/>
+      <stop offset="1" stop-color="#B58308"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="690" cy="180" r="120" fill="white" fill-opacity="0.14"/>
+  <circle cx="210" cy="710" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="300" y="220" width="300" height="420" rx="150" fill="white" fill-opacity="0.86"/>
+  <rect x="356" y="154" width="188" height="92" rx="30" fill="#FFFFFF" fill-opacity="0.95"/>
+  <path d="M392 402H508" stroke="#B58308" stroke-width="20" stroke-linecap="round"/>
+  <path d="M372 452C404 406 497 406 528 452" stroke="#B58308" stroke-width="18" stroke-linecap="round"/>
+  <path d="M390 540C419 560 481 560 510 540" stroke="#B58308" stroke-width="18" stroke-linecap="round"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="800" fill="white" letter-spacing="7">MASK</text>
+</svg>

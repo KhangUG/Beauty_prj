@@ -1,0 +1,17 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="100" x2="790" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF3DD"/>
+      <stop offset="0.55" stop-color="#FFC87C"/>
+      <stop offset="1" stop-color="#B76A1C"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" rx="72" fill="url(#bg)"/>
+  <circle cx="170" cy="180" r="100" fill="white" fill-opacity="0.14"/>
+  <circle cx="740" cy="720" r="170" fill="white" fill-opacity="0.12"/>
+  <rect x="298" y="210" width="304" height="440" rx="152" fill="white" fill-opacity="0.88"/>
+  <rect x="360" y="154" width="180" height="92" rx="30" fill="#FFFFFF" fill-opacity="0.95"/>
+  <path d="M450 310C450 310 547 420 547 486C547 542 503 586 450 586C397 586 353 542 353 486C353 420 450 310 450 310Z" fill="#FFB55B"/>
+  <rect x="386" y="480" width="128" height="84" rx="36" fill="#FFF0DB"/>
+  <text x="450" y="760" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800" fill="white" letter-spacing="4">MOISTURE</text>
+</svg>

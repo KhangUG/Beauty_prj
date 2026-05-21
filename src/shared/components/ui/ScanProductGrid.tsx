@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ArrowUpRight, ShoppingCart } from 'lucide-react'
 import { type ProductRecommendation } from '@/shared/lib/types'
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 type ScanProductGridProps = {
   products: ProductRecommendation[]
@@ -95,7 +95,7 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
       {/* Product grid - 5 columns */}
       <div className="relative overflow-hidden">
         <AnimatePresence custom={direction} mode="wait">
-          <motion.div
+            <motion.div
             key={page}
             custom={direction}
             variants={variants}
@@ -103,7 +103,7 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
             animate="center"
             exit="exit"
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+            className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 grid-rows-2"
           >
             {pageProducts.map((product, index) => (
               <CompactProductCard key={product.id} product={product} index={index} />
@@ -122,7 +122,7 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
             className="flex items-center gap-1.5 rounded-xl border border-rose-200/60 bg-white/70 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:pointer-events-none disabled:opacity-30"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Trước
+            Prev
           </button>
 
           {/* Page dots */}
@@ -145,7 +145,7 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
             disabled={page === totalPages - 1}
             className="flex items-center gap-1.5 rounded-xl border border-rose-200/60 bg-white/70 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:pointer-events-none disabled:opacity-30"
           >
-            Tiếp
+            Next
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -153,7 +153,7 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
 
       {/* Count indicator */}
       <p className="text-center text-[10px] font-medium text-mist/60">
-        Hiển thị {start + 1}–{Math.min(start + PAGE_SIZE, products.length)} / {products.length} sản phẩm
+        Showing {start + 1}–{Math.min(start + PAGE_SIZE, products.length)} of {products.length} products
       </p>
     </div>
   )

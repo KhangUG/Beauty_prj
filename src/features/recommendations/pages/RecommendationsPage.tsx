@@ -3,20 +3,42 @@ import { AIResultCard } from '@/shared/components/ui/AIResultCard'
 import { Card } from '@/shared/components/ui/Card'
 import { Loader } from '@/shared/components/ui/Loader'
 import { RecommendationGrid } from '@/shared/components/ui/RecommendationGrid'
+import MobileAccordion from '@/shared/components/ui/MobileAccordion'
 import { mockScanResult } from '@/shared/data/mock-scan'
 import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useScanHistory } from '@/features/recommendations/hooks/useScanHistory'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { type ProductRecommendation } from '@/shared/lib/types'
 
 export default function RecommendationsPage() {
   const { data, isLoading } = useRecommendations()
-  const { user } = useAuth()
-  const historyQuery = useScanHistory(user?.id ?? 'guest-user')
+  const { user, subscriptionTier } = useAuth()
+  const historyQuery = useScanHistory(user?.id)
   const [sort, setSort] = useState<'match' | 'rating' | 'price'>('match')
   const [techView, setTechView] = useState(false)
   const [ctaVariant, setCtaVariant] = useState<'A' | 'B'>('A')
+
+  const plan = subscriptionTier?.toLowerCase() || 'free'
+  const quotaByPlan: Record<string, number> = {
+    free: 2,
+    premium: 10,
+    pro: 25,
+  }
+  const maxScans = quotaByPlan[plan] ?? quotaByPlan.free
+  const scansUsed = historyQuery.data?.length ?? 0
+  const scansRemaining = Math.max(0, maxScans - scansUsed)
+
+  const scanHistoryItems = (historyQuery.data ?? []).map((item: any) => {
+    const score = item.score ?? item.result?.skinScore ?? 0
+    const created = item.created_at ?? item.createdAt ?? new Date().toISOString()
+    return {
+      id: item.id,
+      score,
+      created,
+    }
+  })
 
   const metrics = useMemo(
     () => [
@@ -60,18 +82,56 @@ export default function RecommendationsPage() {
         <p className="text-xs uppercase tracking-[0.24em] text-rose-600">Personalized Routine</p>
         <h1 className="mt-3 font-display text-4xl text-pearl md:text-5xl">Personalized Recommendation Matrix</h1>
         <p className="mt-3 max-w-2xl text-mist">Products ranked by explainable match metrics — engineered to improve your skin score.</p>
-        <p className="mt-2 text-xs text-mist">
-          {historyQuery.isLoading
-            ? 'Loading history...'
-            : `Saved scans: ${(historyQuery.data ?? []).length}`}
-        </p>
+        <div className="mt-3 grid gap-2 text-xs text-mist sm:grid-cols-2">
+          <p>{historyQuery.isLoading ? 'Loading history...' : `Saved scans: ${scansUsed}`}</p>
+          <p>Plan: {plan} · Remaining: {scansRemaining} / {maxScans}</p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {metrics.map((item) => (
-          <AIResultCard key={item.metric} metric={item.metric} score={item.score} status={item.status} insight={item.insight} />
-        ))}
-      </div>
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-rose-600">Scan History</p>
+            <h2 className="mt-3 font-display text-2xl text-pearl">Recent scans</h2>
+            <p className="mt-2 text-sm text-mist">Review past results and keep track of improvements.</p>
+          </div>
+          <Link to="/scan" className="text-xs text-rose-600 hover:text-rose-500">
+            Run a new scan →
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {historyQuery.isLoading ? (
+            <div className="rounded-2xl border border-rose-100 bg-white/60 p-4 text-sm text-mist">Loading scans...</div>
+          ) : scanHistoryItems.length === 0 ? (
+            <div className="rounded-2xl border border-rose-100 bg-white/60 p-4 text-sm text-mist">
+              No scans yet. Upload a selfie to get your first score.
+            </div>
+          ) : (
+            scanHistoryItems.slice(0, 4).map((scan) => (
+              <div key={scan.id} className="rounded-2xl border border-rose-100 bg-white/80 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.24em] text-rose-500">Scan {String(scan.id).slice(0, 8)}</p>
+                  <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-600">
+                    Score {scan.score}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-mist">
+                  {new Date(scan.created).toLocaleString()}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+          <MobileAccordion title="Metrics">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {metrics.map((item) => (
+                <AIResultCard key={item.metric} metric={item.metric} score={item.score} status={item.status} insight={item.insight} />
+              ))}
+            </div>
+          </MobileAccordion>
 
       <Card className="p-6">
         <div className="flex items-center justify-between">

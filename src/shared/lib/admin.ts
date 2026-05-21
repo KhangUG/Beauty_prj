@@ -74,7 +74,7 @@ export function canAccessAdminSection(role: AdminRole | null, section: AdminSect
 export function getAdminRoleLabel(role: AdminRole | null) {
   switch (role) {
     case 'superadmin':
-      return 'Quản trị tối cao (Super Admin)'
+      return 'Super Admin'
     case 'catalog':
       return 'Quản lý danh mục (Catalog Admin)'
     case 'operations':

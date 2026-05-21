@@ -69,3 +69,71 @@ h1,h2,h3,h4,h5,h6 {
   transform: translateY(-6px);
   box-shadow: 0 18px 40px rgba(60,24,34,0.12);
 }
+
+.admin-shell {
+  --admin-ink: #0f172a;
+  --admin-muted: #64748b;
+  --admin-border: rgba(148, 163, 184, 0.45);
+}
+
+.admin-shell .font-display {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.admin-shell .text-rose-950 {
+  color: var(--admin-ink);
+}
+
+.admin-shell .text-rose-600 {
+  color: #475569;
+}
+
+.admin-shell .text-rose-500 {
+  color: #64748b;
+}
+
+.admin-shell .text-cyan {
+  color: #64748b;
+}
+
+.admin-shell .text-mist {
+  color: var(--admin-muted);
+}
+
+.admin-shell [class~="text-mist/90"] {
+  color: rgba(100, 116, 139, 0.9);
+}
+
+.admin-shell [class~="text-mist/70"] {
+  color: rgba(100, 116, 139, 0.7);
+}
+
+.admin-shell [class~="text-mist/60"] {
+  color: rgba(100, 116, 139, 0.6);
+}
+
+.admin-shell .border-rose-100 {
+  border-color: var(--admin-border);
+}
+
+.admin-shell .border-rose-200 {
+  border-color: rgba(148, 163, 184, 0.55);
+}
+
+.admin-shell [class~="border-rose-100/50"] {
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.admin-shell .bg-rose-50 {
+  background-color: #f8fafc;
+}
+
+.admin-shell [class~="bg-rose-50/20"] {
+  background-color: rgba(248, 250, 252, 0.6);
+}
+
+.admin-shell [class~="bg-rose-50/60"] {
+  background-color: rgba(248, 250, 252, 0.8);
+}

@@ -11,6 +11,8 @@ const ProductsPage = lazy(() => import('@/features/products/pages/ProductsPage')
 const AuthPage = lazy(() => import('@/features/auth/pages/AuthPage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const AdminPage = lazy(() => import('@/features/admin/pages/AdminPage'))
+const CheckoutPage = lazy(() => import('@/features/checkout/pages/CheckoutPage'))
+const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'))
 const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'))
 const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'))
 
@@ -23,6 +25,8 @@ const router = createBrowserRouter([
       { path: '/scan', element: <AIScanPage /> },
       { path: '/recommendations', element: <RecommendationsPage /> },
       { path: '/products', element: <ProductsPage /> },
+      { path: '/checkout', element: <CheckoutPage /> },
+      { path: '/profile', element: <ProfilePage /> },
       { path: '/auth', element: <AuthPage /> },
       { path: '/auth/verify', element: <VerifyEmailPage /> },
       { path: '/auth/reset-password', element: <ResetPasswordPage /> },

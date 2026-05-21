@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { useToast } from '@/shared/hooks/useToast'
 import { AIResultCard } from '@/shared/components/ui/AIResultCard'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -12,6 +13,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { persistScan } from '@/features/ai-scan/services/scan-persistence-service'
 import { useUIStore } from '@/store/ui-store'
 import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations'
+import { useScanHistory } from '@/features/recommendations/hooks/useScanHistory'
 import { ScanProductGrid } from '@/shared/components/ui/ScanProductGrid'
 import { type ProductRecommendation, type ScanResult } from '@/shared/lib/types'
 
@@ -106,12 +108,13 @@ function buildRecommendationSummary(scanResult: ScanResult | null) {
 
 export default function AIScanPage() {
   const { phase, imagePreview, scanResult, setImagePreview, runFakeScan, reset } = useScanStore()
-  const { user } = useAuth()
+  const { user, subscriptionTier } = useAuth()
   const hasSeenScanOnboarding = useUIStore((state) => state.hasSeenScanOnboarding)
   const markScanOnboardingSeen = useUIStore((state) => state.markScanOnboardingSeen)
   const [webcamOpen, setWebcamOpen] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(!hasSeenScanOnboarding)
+  const [showPaywall, setShowPaywall] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
 
@@ -120,11 +123,31 @@ export default function AIScanPage() {
   const rankedProducts = useMemo(() => rankRecommendations(displayProducts, scanResult), [displayProducts, scanResult])
   const recommendationSummary = useMemo(() => buildRecommendationSummary(scanResult), [scanResult])
 
+  const scanHistoryQuery = useScanHistory(user?.id)
+  const plan = subscriptionTier?.toLowerCase() || 'free'
+  const quotaByPlan: Record<string, number> = {
+    free: 2,
+    premium: 10,
+    pro: 25,
+  }
+  const maxFreeScans = quotaByPlan[plan] ?? quotaByPlan.free
+  const scansUsed = scanHistoryQuery.data?.length ?? 0
+  const canScan = scansUsed < maxFreeScans
+  const remainingFreeScans = Math.max(0, maxFreeScans - scansUsed)
+
+  const toast = useToast()
+
   const persistMutation = useMutation({
     mutationFn: async () => {
       if (!scanResult) return null
-      const userId = user?.id ?? 'guest-user'
+      const userId = user?.id ?? ''
       return persistScan(userId, scanResult)
+    },
+    onSuccess: () => {
+      toast.success('Scan saved')
+    },
+    onError: () => {
+      toast.error('Save failed')
     },
   })
 
@@ -198,13 +221,26 @@ export default function AIScanPage() {
     try {
       const params = new URLSearchParams(window.location.search)
       if (params.get('demo') === '1') {
+        if (scanHistoryQuery.isLoading) return
         setImagePreview('/demo-products/serum.svg')
-        void runFakeScan()
+        if (canScan) {
+          void runFakeScan()
+        } else {
+          setShowPaywall(true)
+        }
       }
     } catch {
       // ignore
     }
-  }, [setImagePreview, runFakeScan])
+  }, [setImagePreview, runFakeScan, canScan, scanHistoryQuery.isLoading])
+
+  const handleRunScan = () => {
+    if (!canScan) {
+      setShowPaywall(true)
+      return
+    }
+    void runFakeScan()
+  }
 
   return (
     <section className="section-shell pb-20 pt-4">
@@ -226,7 +262,7 @@ export default function AIScanPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-xs md:min-w-[360px]">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               {[
                 ['Upload', 'Selfie or webcam'],
                 ['Analyze', 'Texture and hydration'],
@@ -268,7 +304,11 @@ export default function AIScanPage() {
                       Capture
                     </Button>
                   ) : null}
-                  <Button size="sm" onClick={() => void runFakeScan()} disabled={!imagePreview || phase === 'scanning'}>
+                  <Button
+                    size="sm"
+                    onClick={handleRunScan}
+                    disabled={!imagePreview || phase === 'scanning' || scanHistoryQuery.isLoading}
+                  >
                     Run Scan
                   </Button>
                   <Button variant="accent" size="sm" onClick={reset}>
@@ -277,6 +317,13 @@ export default function AIScanPage() {
                 </div>
 
                 {cameraError ? <p className="text-xs text-rose-400">{cameraError}</p> : null}
+                {scanHistoryQuery.isLoading ? (
+                  <p className="text-[11px] text-mist">Đang kiểm tra số lần quét...</p>
+                ) : (
+                  <p className="text-[11px] text-mist">
+                    Gói {plan}: {maxFreeScans} lượt — còn {remainingFreeScans} lượt.
+                  </p>
+                )}
               </div>
 
               <div className="rounded-[1.5rem] border border-rose-100/50 bg-[linear-gradient(180deg,rgba(255,250,250,0.94),rgba(255,245,246,0.86))] p-4">
@@ -310,9 +357,7 @@ export default function AIScanPage() {
                         View Full Recommendations →
                       </Button>
                     </Link>
-                    <p className="text-[10px] text-mist">
-                      {persistMutation.isPending ? 'Saving...' : persistMutation.error ? 'Save failed.' : 'Scan saved ✓'}
-                    </p>
+                    <p className="text-[10px] text-mist">{persistMutation.isPending ? 'Saving...' : null}</p>
                   </div>
                 ) : null}
               </div>
@@ -326,12 +371,12 @@ export default function AIScanPage() {
             </div>
 
             <div className="space-y-5 p-6">
-              <div className="grid gap-5 xl:grid-cols-[280px,1fr]">
+              <div className="grid gap-5 grid-cols-1 xl:grid-cols-[280px,1fr]">
                 <div className="relative overflow-hidden rounded-[1.75rem] border border-rose-100/40 bg-[linear-gradient(180deg,rgba(255,250,250,0.95),rgba(255,250,250,0.88))] shadow-sm">
                   <div className="border-b border-rose-100/40 px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-400">Preview</p>
                   </div>
-                  <div className="relative flex h-[24rem] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(254,215,222,0.08),transparent_38%),linear-gradient(180deg,rgba(255,250,250,0.84),rgba(255,245,246,0.92))]">
+                  <div className="relative flex h-[18rem] sm:h-[24rem] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(254,215,222,0.08),transparent_38%),linear-gradient(180deg,rgba(255,250,250,0.84),rgba(255,245,246,0.92))]">
                     {webcamOpen ? (
                       <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
                     ) : imagePreview ? (
@@ -348,7 +393,7 @@ export default function AIScanPage() {
 
                 <div className="space-y-4">
                   {scanResult ? (
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         { metric: 'Skin Score', score: scanResult.skinScore, status: 'great' as const, insight: 'Overall quality' },
                         { metric: 'Acne', score: scanResult.acne.value, status: scanResult.acne.status, insight: 'Inflammation level' },
@@ -359,7 +404,7 @@ export default function AIScanPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {[
                         ['Skin Score', 'Awaiting scan'],
                         ['Hydration', 'Pending analysis'],
@@ -398,7 +443,7 @@ export default function AIScanPage() {
                 <h2 className="mt-1 font-display text-2xl font-extrabold text-pearl md:text-3xl">Precision-Matched Skincare</h2>
                 <p className="mt-1 max-w-2xl text-xs text-mist">{recommendationSummary}</p>
               </div>
-              <Link to="/recommendations" className="hidden shrink-0 md:block">
+              <Link to="/recommendations" className="shrink-0 block mt-3 sm:mt-0">
                 <Button variant="ghost" size="sm" className="text-xs">
                   View all →
                 </Button>
@@ -420,6 +465,22 @@ export default function AIScanPage() {
             </Card>
           </motion.div>
         ) : null}
+
+        <Modal open={showPaywall} title="Cần nâng cấp để quét tiếp" onClose={() => setShowPaywall(false)}>
+          <div className="space-y-4 text-sm text-mist">
+            <p>Bạn đã dùng hết {maxFreeScans} lượt quét của gói {plan}. Vui lòng nạp tiền để tiếp tục quét.</p>
+            <div className="rounded-2xl border border-rose-100 bg-white/80 p-4 text-xs text-rose-950">
+              <p className="font-semibold">Gợi ý:</p>
+              <p className="mt-1">Nâng cấp gói để mở khóa quét không giới hạn và lưu trữ lịch sử đầy đủ.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => setShowPaywall(false)}>Đóng</Button>
+              <Link to="/checkout">
+                <Button variant="ghost">Nạp tiền</Button>
+              </Link>
+            </div>
+          </div>
+        </Modal>
 
         <Modal
           open={showOnboarding}

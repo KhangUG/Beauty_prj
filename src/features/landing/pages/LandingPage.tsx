@@ -101,9 +101,9 @@ export default function LandingPage() {
           </Suspense>
         </div>
 
-        <div className="mx-auto grid min-h-[calc(100vh-1rem)] w-full max-w-[1720px] grid-cols-1 gap-4 px-3 py-3 lg:grid-cols-[1.08fr,0.92fr] lg:px-4 lg:py-4 xl:px-5">
+        <div className="mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-[1720px] grid-cols-1 gap-3 px-3 py-2 lg:grid-cols-[1.08fr,0.92fr] lg:px-4 lg:py-3 xl:px-5">
           <motion.div
-            className="relative flex min-h-[44rem] flex-col justify-between rounded-[1.75rem] border border-black/5 bg-white/65 p-5 shadow-[0_30px_80px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-8 xl:p-10"
+            className="relative flex min-h-[36rem] flex-col justify-between rounded-[1.75rem] border border-black/5 bg-white/65 p-5 shadow-[0_30px_80px_rgba(163,93,107,0.08)] backdrop-blur-xl lg:p-7 xl:p-9"
             initial={{ opacity: 0, y: 24, scale: 0.985, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             transition={{ duration: 1.05, ease: 'easeOut' }}
@@ -160,7 +160,7 @@ export default function LandingPage() {
               </MotionLink>
             </div>
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {[
                 ['Skin Score', '86'],
                 ['Hydration', 'High'],
@@ -175,7 +175,7 @@ export default function LandingPage() {
           </motion.div>
 
           <motion.div
-            className="grid gap-4 self-stretch"
+            className="grid gap-3 self-stretch"
             initial={{ opacity: 0, y: 28, scale: 0.985, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             transition={{ duration: 1.15, ease: 'easeOut', delay: 0.12 }}
@@ -184,7 +184,7 @@ export default function LandingPage() {
               <div className="border-b border-black/5 px-6 py-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-rose-500">LIVE FEATURE</p>
               </div>
-              <img src="/luxury-demo.svg" alt="Luxury beauty product" className="h-[min(34rem,48vh)] w-full object-cover" />
+              <img src="/luxury-demo.svg" alt="Luxury beauty product" className="h-[min(30rem,40vh)] w-full object-cover" />
               <div className="border-t border-black/5 p-5 lg:p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-rose-500">Featured Product</p>
                 <div className="mt-2 flex items-end justify-between gap-4">

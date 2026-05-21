@@ -180,9 +180,9 @@ function AdminSectionTitle({
 }) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-[0.24em] text-cyan">{eyebrow}</p>
-      <h2 className="mt-2 font-display text-3xl text-rose-950">{title}</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-mist">{description}</p>
+      <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{eyebrow}</p>
+      <h2 className="mt-2 font-display text-3xl text-slate-900">{title}</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{description}</p>
     </div>
   )
 }
@@ -800,7 +800,7 @@ export default function AdminPage() {
   }
 
   return (
-    <section className="section-shell pb-12">
+    <section className="section-shell pb-12 admin-shell">
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         {/* Sidebar Nav */}
         <aside className="sticky top-[calc(var(--app-header-height)+1rem)] h-fit rounded-[2rem] border border-rose-100 bg-white/80 p-4 shadow-[0_24px_70px_rgba(168,112,134,0.12)] backdrop-blur-xl">

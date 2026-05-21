@@ -3,11 +3,11 @@ import { env } from '@/config/env'
 
 export type AdminRole = 'superadmin' | 'catalog' | 'operations' | 'content' | 'analyst'
 
-export type AdminSection = 'overview' | 'products' | 'scans' | 'recommendations' | 'access' | 'settings' | 'revenue'
+export type AdminSection = 'overview' | 'products' | 'categories' | 'product-configs' | 'scans' | 'recommendations' | 'access' | 'settings' | 'revenue'
 
 const roleSections: Record<AdminRole, AdminSection[]> = {
-  superadmin: ['overview', 'products', 'scans', 'recommendations', 'access', 'settings', 'revenue'],
-  catalog: ['overview', 'products', 'recommendations', 'settings', 'revenue'],
+  superadmin: ['overview', 'products', 'categories', 'product-configs', 'scans', 'recommendations', 'access', 'settings', 'revenue'],
+  catalog: ['overview', 'products', 'categories', 'product-configs', 'recommendations', 'settings', 'revenue'],
   operations: ['overview', 'products', 'scans', 'settings', 'revenue'],
   content: ['overview', 'products', 'recommendations', 'settings'],
   analyst: ['overview', 'scans', 'recommendations', 'settings', 'revenue'],

@@ -1,4 +1,3 @@
-import { mockProducts } from '@/shared/data/mock-products'
 import { databaseService } from '@/services/supabase/database-service'
 
 export async function fetchProducts() {
@@ -15,6 +14,6 @@ export async function fetchProducts() {
       category: product.tags[0] ?? 'skincare',
     }))
   } catch {
-    return mockProducts
+    return []
   }
 }

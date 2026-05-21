@@ -15,6 +15,9 @@ export type AppDatabase = {
           image_url: string
           external_url: string
           tags: string[]
+          brand: string | null
+          price: number | null
+          category_id: string | null
         }
         Insert: {
           id?: string
@@ -24,6 +27,9 @@ export type AppDatabase = {
           image_url: string
           external_url: string
           tags: string[]
+          brand?: string | null
+          price?: number | null
+          category_id?: string | null
         }
         Update: {
           id?: string
@@ -33,6 +39,9 @@ export type AppDatabase = {
           image_url?: string
           external_url?: string
           tags?: string[]
+          brand?: string | null
+          price?: number | null
+          category_id?: string | null
         }
         Relationships: []
       }
@@ -81,6 +90,60 @@ export type AppDatabase = {
           scan_id?: string
           product_id?: string
           reason?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          id: string
+          name: string
+          api_category_key: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          api_category_key: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          api_category_key?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      product_configs: {
+        Row: {
+          id: string
+          product_id: string
+          hex_color: string | null
+          texture: string | null
+          color_intensity: string | null
+          pattern_name: string | null
+          extra_params: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          hex_color?: string | null
+          texture?: string | null
+          color_intensity?: string | null
+          pattern_name?: string | null
+          extra_params?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          hex_color?: string | null
+          texture?: string | null
+          color_intensity?: string | null
+          pattern_name?: string | null
+          extra_params?: Json | null
+          created_at?: string
         }
         Relationships: []
       }

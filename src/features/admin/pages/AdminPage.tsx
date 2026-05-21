@@ -25,9 +25,6 @@ import {
   Package,
   RefreshCw,
   UserCheck,
-  TrendingUp,
-  ShoppingBag,
-  CreditCard,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -35,7 +32,7 @@ import { Input } from '@/shared/components/ui/Input'
 import { Loader } from '@/shared/components/ui/Loader'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useAuthStore } from '@/features/auth/store/auth-store'
-import { supabase } from '@/services/supabase/client'
+import { supabase, type Json } from '@/services/supabase/client'
 import {
   databaseService,
   type AdminProductRecord,
@@ -53,7 +50,9 @@ const sidebarSections: Array<{
   icon: typeof LayoutGrid
 }> = [
     { id: 'overview', label: 'Tổng quan', description: 'Tình trạng hệ thống và chỉ số', icon: LayoutGrid },
-    { id: 'products', label: 'Sản phẩm', description: 'Quản lý danh mục và đồng bộ', icon: Store },
+    { id: 'products', label: 'Sản phẩm', description: 'Quản lý hàng hóa và catalog', icon: Store },
+    { id: 'categories', label: 'Categories', description: 'Quản lý danh mục sản phẩm', icon: ListChecks },
+    { id: 'product-configs', label: 'AI Configs', description: 'Quản lý cấu hình sản phẩm AI', icon: Sparkles },
     { id: 'scans', label: 'Quét da', description: 'Xem lịch sử quét và mô phỏng', icon: Camera },
     { id: 'recommendations', label: 'Gợi ý', description: 'Quản lý sản phẩm phù hợp', icon: Sparkles },
     { id: 'access', label: 'Phân quyền', description: 'Vai trò và quyền hạn', icon: Users },
@@ -69,10 +68,8 @@ type ProductFormState = {
   externalUrl: string
   tags: string
   category: string
-  price: string
-  originalPrice: string
-  discount: string
-  stock: string
+  categoryId: string
+  brand: string
 }
 
 type ScanFormState = {
@@ -88,6 +85,22 @@ type RecommendationFormState = {
   reason: string
 }
 
+type CategoryFormState = {
+  id: string
+  name: string
+  apiCategoryKey: string
+}
+
+type ProductConfigFormState = {
+  id: string
+  productId: string
+  hexColor: string
+  texture: string
+  colorIntensity: string
+  patternName: string
+  extraParams: string
+}
+
 const emptyProductForm: ProductFormState = {
   id: '',
   name: '',
@@ -96,10 +109,24 @@ const emptyProductForm: ProductFormState = {
   externalUrl: '',
   tags: '',
   category: 'Serum',
-  price: '',
-  originalPrice: '',
-  discount: '',
-  stock: '',
+  categoryId: '',
+  brand: '',
+}
+
+const emptyCategoryForm: CategoryFormState = {
+  id: '',
+  name: '',
+  apiCategoryKey: '',
+}
+
+const emptyProductConfigForm: ProductConfigFormState = {
+  id: '',
+  productId: '',
+  hexColor: '#ffffff',
+  texture: 'Smooth',
+  colorIntensity: 'Medium',
+  patternName: '',
+  extraParams: '{}',
 }
 
 const emptyScanForm: ScanFormState = {
@@ -145,10 +172,8 @@ function mapProductForm(product: AdminProductRecord): ProductFormState {
     externalUrl: product.external_url,
     tags: parsed.cleanTags.join(', '),
     category: parsed.category,
-    price: parsed.price ?? '',
-    originalPrice: parsed.originalPrice ?? '',
-    discount: parsed.discount !== undefined ? String(parsed.discount) : '',
-    stock: parsed.stock !== undefined ? String(parsed.stock) : '',
+    categoryId: product.category_id,
+    brand: product.brand ?? '',
   }
 }
 
@@ -196,6 +221,8 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm)
   const [scanForm, setScanForm] = useState<ScanFormState>(emptyScanForm)
   const [recommendationForm, setRecommendationForm] = useState<RecommendationFormState>(emptyRecommendationForm)
+  const [categoryForm, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm)
+  const [productConfigForm, setProductConfigForm] = useState<ProductConfigFormState>(emptyProductConfigForm)
 
   // Filters & Search
   const [productSearch, setProductSearch] = useState('')
@@ -260,6 +287,16 @@ export default function AdminPage() {
   const recommendationsQuery = useQuery({
     queryKey: ['admin', 'recommendations'],
     queryFn: () => databaseService.getAdminRecommendations(),
+  })
+
+  const categoriesQuery = useQuery({
+    queryKey: ['admin', 'categories'],
+    queryFn: () => databaseService.getAdminCategories(),
+  })
+
+  const productConfigsQuery = useQuery({
+    queryKey: ['admin', 'product-configs'],
+    queryFn: () => databaseService.getAdminProductConfigs(),
   })
 
   const usersQuery = useQuery({
@@ -488,22 +525,24 @@ export default function AdminPage() {
       const encodedTags = encodeProductTags({
         tags: cleanTagsList,
         category: productForm.category,
-        price: productForm.price,
-        originalPrice: productForm.originalPrice,
-        discount: productForm.discount,
-        stock: productForm.stock,
       })
 
       const payload = {
         name: productForm.name.trim(),
         description: productForm.description.trim(),
         image_url: productForm.imageUrl.trim(),
-        external_url: productForm.externalUrl.trim(),
+        external_url: productForm.externalUrl.trim() || '',
         tags: encodedTags,
+        brand: productForm.brand.trim() || null,
+        category_id: productForm.categoryId,
       }
 
-      if (!payload.name || !payload.description || !payload.image_url || !payload.external_url) {
+      if (!payload.name || !payload.description || !payload.image_url) {
         throw new Error('Vui lòng điền đầy đủ thông tin sản phẩm trước khi lưu.')
+      }
+
+      if (!payload.category_id) {
+        throw new Error('Vui lòng chọn danh mục cho sản phẩm.')
       }
 
       if (productForm.id) {
@@ -526,6 +565,82 @@ export default function AdminPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'products'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'products'] })
       await queryClient.invalidateQueries({ queryKey: ['landing', 'products'] })
+    },
+  })
+
+  const saveCategoryMutation = useMutation({
+    mutationFn: async () => {
+      const input = {
+        name: categoryForm.name.trim(),
+        api_category_key: categoryForm.apiCategoryKey.trim().toLowerCase(),
+      }
+
+      if (!input.name || !input.api_category_key) {
+        throw new Error('Vui lòng điền đầy đủ thông tin danh mục.')
+      }
+
+      if (categoryForm.id) {
+        return databaseService.updateCategory(categoryForm.id, input)
+      }
+
+      return databaseService.createCategory(input)
+    },
+    onSuccess: async () => {
+      setCategoryForm(emptyCategoryForm)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'categories'] })
+    },
+  })
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => databaseService.deleteCategory(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'categories'] })
+    },
+  })
+
+  const saveProductConfigMutation = useMutation({
+    mutationFn: async () => {
+      let extraParams: Json | null = null
+      if (productConfigForm.extraParams.trim()) {
+        try {
+          extraParams = JSON.parse(productConfigForm.extraParams) as Json
+        } catch {
+          throw new Error('Extra params phải là JSON hợp lệ.')
+        }
+        if (extraParams !== null && typeof extraParams !== 'object') {
+          throw new Error('Extra params phải là một đối tượng hoặc mảng JSON.')
+        }
+      }
+
+      const payload = {
+        product_id: productConfigForm.productId,
+        hex_color: productConfigForm.hexColor.trim() || null,
+        texture: productConfigForm.texture.trim() || null,
+        color_intensity: productConfigForm.colorIntensity.trim() || null,
+        pattern_name: productConfigForm.patternName.trim() || null,
+        extra_params: extraParams,
+      }
+
+      if (!payload.product_id) {
+        throw new Error('Chọn một sản phẩm để gắn cấu hình AI.')
+      }
+
+      if (productConfigForm.id) {
+        return databaseService.updateProductConfig(productConfigForm.id, payload)
+      }
+
+      return databaseService.createProductConfig(payload)
+    },
+    onSuccess: async () => {
+      setProductConfigForm(emptyProductConfigForm)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'product-configs'] })
+    },
+  })
+
+  const deleteProductConfigMutation = useMutation({
+    mutationFn: async (id: string) => databaseService.deleteProductConfig(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'product-configs'] })
     },
   })
 
@@ -1098,70 +1213,34 @@ export default function AdminPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Danh mục</label>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Thương hiệu</label>
+                      <Input
+                        placeholder="Ví dụ: L'Oréal"
+                        value={productForm.brand}
+                        onChange={(event) => setProductForm((state) => ({ ...state, brand: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Danh mục *</label>
                       <select
                         className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
-                        value={productForm.category}
-                        onChange={(event) => setProductForm((state) => ({ ...state, category: event.target.value }))}
+                        value={productForm.categoryId}
+                        onChange={(event) => {
+                          const selectedCategory = categoriesQuery.data?.find((category) => category.id === event.target.value)
+                          setProductForm((state) => ({
+                            ...state,
+                            categoryId: event.target.value,
+                            category: selectedCategory?.name ?? event.target.value,
+                          }))
+                        }}
                       >
-                        <option value="Cleanser">Sữa rửa mặt</option>
-                        <option value="Serum">Serum</option>
-                        <option value="Moisturizer">Dưỡng ẩm</option>
-                        <option value="Toner">Tôner</option>
-                        <option value="Sunscreen">Kem chống nắng</option>
-                        <option value="Treatment">Điều trị</option>
-                        <option value="Essence">Tinh chất</option>
-                        <option value="Mask">Mặt nạ</option>
-                        <option value="Eye Care">Chăm sóc mắt</option>
+                        <option value="">Chọn danh mục</option>
+                        {(categoriesQuery.data ?? []).map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Số lượng tồn</label>
-                      <Input
-                        placeholder="Tồn kho (ví dụ: 15)"
-                        type="number"
-                        value={productForm.stock}
-                        onChange={(event) => setProductForm((state) => ({ ...state, stock: event.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Giá bán</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-mist/60" />
-                        <Input
-                          className="pl-8"
-                          placeholder="42"
-                          value={productForm.price.replace('$', '')}
-                          onChange={(event) => setProductForm((state) => ({ ...state, price: event.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Giá gốc</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-mist/60" />
-                        <Input
-                          className="pl-8"
-                          placeholder="56"
-                          value={productForm.originalPrice.replace('$', '')}
-                          onChange={(event) => setProductForm((state) => ({ ...state, originalPrice: event.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Giảm giá %</label>
-                      <Input
-                        placeholder="25"
-                        type="number"
-                        value={productForm.discount}
-                        onChange={(event) => setProductForm((state) => ({ ...state, discount: event.target.value }))}
-                      />
                     </div>
                   </div>
 
@@ -1175,7 +1254,7 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Liên kết đối tác</label>
+                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Liên kết đối tác (tuỳ chọn)</label>
                     <Input
                       placeholder="https://example.com/partner-item"
                       value={productForm.externalUrl}
@@ -1230,15 +1309,11 @@ export default function AdminPage() {
                     onChange={(e) => setProductCategoryFilter(e.target.value)}
                   >
                     <option value="All">Tất cả danh mục</option>
-                    <option value="Cleanser">Sữa rửa mặt</option>
-                    <option value="Serum">Serum</option>
-                    <option value="Moisturizer">Dưỡng ẩm</option>
-                    <option value="Toner">Tôner</option>
-                    <option value="Sunscreen">Kem chống nắng</option>
-                    <option value="Treatment">Điều trị</option>
-                    <option value="Essence">Tinh chất</option>
-                    <option value="Mask">Mặt nạ</option>
-                    <option value="Eye Care">Chăm sóc mắt</option>
+                    {(categoriesQuery.data ?? []).map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1270,6 +1345,9 @@ export default function AdminPage() {
                           </div>
 
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-rose-950/80 pt-1">
+                            {product.brand && (
+                              <span className="text-rose-600">{product.brand}</span>
+                            )}
                             {parsed.price && (
                               <span className="flex items-center gap-1">
                                 Price: <span className="text-rose-600 font-extrabold">{parsed.price}</span>
@@ -1315,6 +1393,249 @@ export default function AdminPage() {
                   )
                 })}
               </div>
+            </div>
+          ) : null}
+
+          {/* CATEGORIES TAB */}
+          {activeSection === 'categories' ? (
+            <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="Danh mục sản phẩm"
+                  title={categoryForm.id ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
+                  description="Quản lý danh mục cấp cao và API category key để đồng bộ dữ liệu AI."
+                />
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Tên danh mục</label>
+                    <Input
+                      placeholder="Ví dụ: Son môi"
+                      value={categoryForm.name}
+                      onChange={(event) => setCategoryForm((state) => ({ ...state, name: event.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">API Category Key</label>
+                    <Input
+                      placeholder="Ví dụ: lip_color"
+                      value={categoryForm.apiCategoryKey}
+                      onChange={(event) => setCategoryForm((state) => ({ ...state, apiCategoryKey: event.target.value }))}
+                    />
+                  </div>
+                  {saveCategoryMutation.error ? (
+                    <p className="text-sm text-rose-500">{saveCategoryMutation.error.message}</p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Button onClick={() => saveCategoryMutation.mutate()} disabled={saveCategoryMutation.isPending}>
+                      {saveCategoryMutation.isPending ? 'Đang lưu...' : categoryForm.id ? 'Cập nhật danh mục' : 'Tạo danh mục'}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setCategoryForm(emptyCategoryForm)}>
+                      Đặt lại
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="Danh sách danh mục"
+                  title="Các danh mục hiện có"
+                  description="Kiểm tra, sửa hoặc xóa các danh mục đã tạo để đồng bộ với sản phẩm."
+                />
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                        <th className="pb-3 pr-3">Tên danh mục</th>
+                        <th className="pb-3 px-3">API key</th>
+                        <th className="pb-3 px-3">Ngày tạo</th>
+                        <th className="pb-3 pl-3 text-right">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50">
+                      {(categoriesQuery.data ?? []).map((category) => (
+                        <tr key={category.id} className="hover:bg-rose-50/20 text-rose-950">
+                          <td className="py-3 pr-3 font-medium">{category.name}</td>
+                          <td className="py-3 px-3 text-mist">{category.api_category_key}</td>
+                          <td className="py-3 px-3 text-mist">{formatDate(category.created_at)}</td>
+                          <td className="py-3 pl-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => setCategoryForm({ id: category.id, name: category.name, apiCategoryKey: category.api_category_key })}>
+                                Sửa
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Xóa danh mục ${category.name}?`)) {
+                                    deleteCategoryMutation.mutate(category.id)
+                                  }
+                                }}
+                                disabled={deleteCategoryMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(categoriesQuery.data?.length ?? 0) === 0 ? (
+                    <p className="mt-4 text-sm text-mist">Chưa có danh mục nào. Tạo danh mục mới để bắt đầu.</p>
+                  ) : null}
+                </div>
+              </Card>
+            </div>
+          ) : null}
+
+          {/* PRODUCT CONFIGS TAB */}
+          {activeSection === 'product-configs' ? (
+            <div className="space-y-4">
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="Cấu hình AI"
+                  title={productConfigForm.id ? 'Chỉnh sửa cấu hình sản phẩm' : 'Tạo cấu hình sản phẩm mới'}
+                  description="Liên kết sản phẩm với các thông số AI như màu sắc, texture và pattern."
+                />
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Sản phẩm</label>
+                    <select
+                      className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                      value={productConfigForm.productId}
+                      onChange={(event) => setProductConfigForm((state) => ({ ...state, productId: event.target.value }))}
+                    >
+                      <option value="">Chọn sản phẩm</option>
+                      {(productsQuery.data ?? []).map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Mã màu</label>
+                      <Input
+                        placeholder="#F3D6E8"
+                        value={productConfigForm.hexColor}
+                        onChange={(event) => setProductConfigForm((state) => ({ ...state, hexColor: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Texture</label>
+                      <Input
+                        placeholder="Ví dụ: Smooth"
+                        value={productConfigForm.texture}
+                        onChange={(event) => setProductConfigForm((state) => ({ ...state, texture: event.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Độ đậm màu</label>
+                      <Input
+                        placeholder="Light / Medium / Intense"
+                        value={productConfigForm.colorIntensity}
+                        onChange={(event) => setProductConfigForm((state) => ({ ...state, colorIntensity: event.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Tên pattern</label>
+                      <Input
+                        placeholder="Ví dụ: Satin Glow"
+                        value={productConfigForm.patternName}
+                        onChange={(event) => setProductConfigForm((state) => ({ ...state, patternName: event.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Extra params (JSON)</label>
+                    <textarea
+                      className="min-h-[90px] w-full rounded-2xl border border-rose-200/80 bg-white/80 px-4 py-3 text-sm text-pearl placeholder:text-mist/70 focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                      value={productConfigForm.extraParams}
+                      onChange={(event) => setProductConfigForm((state) => ({ ...state, extraParams: event.target.value }))}
+                    />
+                  </div>
+                  {saveProductConfigMutation.error ? (
+                    <p className="text-sm text-rose-500">{saveProductConfigMutation.error.message}</p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Button onClick={() => saveProductConfigMutation.mutate()} disabled={saveProductConfigMutation.isPending}>
+                      {saveProductConfigMutation.isPending ? 'Đang lưu...' : productConfigForm.id ? 'Cập nhật cấu hình' : 'Tạo cấu hình'}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setProductConfigForm(emptyProductConfigForm)}>
+                      Đặt lại
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm overflow-x-auto">
+                <AdminSectionTitle
+                  eyebrow="Danh sách cấu hình"
+                  title="Bảng chi tiết cấu hình AI"
+                  description="Xem toàn bộ các cấu hình đã liên kết với sản phẩm và sửa nhanh thông số."
+                />
+                <div className="mt-6 overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                        <th className="pb-3 pr-3">Sản phẩm</th>
+                        <th className="pb-3 px-3">Mã màu</th>
+                        <th className="pb-3 px-3">Texture</th>
+                        <th className="pb-3 px-3">Cường độ</th>
+                        <th className="pb-3 px-3">Pattern</th>
+                        <th className="pb-3 px-3">Extra params</th>
+                        <th className="pb-3 pl-3 text-right">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50">
+                      {(productConfigsQuery.data ?? []).map((config) => (
+                        <tr key={config.id} className="hover:bg-rose-50/20 text-rose-950 align-top">
+                          <td className="py-3 pr-3 font-medium">{productLookup.get(config.product_id)?.name ?? 'Unknown'}</td>
+                          <td className="py-3 px-3 text-mist">{config.hex_color || '—'}</td>
+                          <td className="py-3 px-3 text-mist">{config.texture || '—'}</td>
+                          <td className="py-3 px-3 text-mist">{config.color_intensity || '—'}</td>
+                          <td className="py-3 px-3 text-mist">{config.pattern_name || '—'}</td>
+                          <td className="py-3 px-3 text-mist break-words max-w-[220px]">{config.extra_params ? JSON.stringify(config.extra_params) : '{}'}</td>
+                          <td className="py-3 pl-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => setProductConfigForm({
+                                id: config.id,
+                                productId: config.product_id,
+                                hexColor: config.hex_color ?? '#ffffff',
+                                texture: config.texture ?? 'Smooth',
+                                colorIntensity: config.color_intensity ?? 'Medium',
+                                patternName: config.pattern_name ?? '',
+                                extraParams: config.extra_params ? JSON.stringify(config.extra_params, null, 2) : '{}',
+                              })}>
+                                Sửa
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm('Xóa cấu hình này?')) {
+                                    deleteProductConfigMutation.mutate(config.id)
+                                  }
+                                }}
+                                disabled={deleteProductConfigMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(productConfigsQuery.data?.length ?? 0) === 0 ? (
+                    <p className="mt-4 text-sm text-mist">Chưa có cấu hình AI nào. Tạo cấu hình mới để liên kết với sản phẩm.</p>
+                  ) : null}
+                </div>
+              </Card>
             </div>
           ) : null}
 

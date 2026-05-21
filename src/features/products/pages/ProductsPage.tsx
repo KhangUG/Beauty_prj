@@ -1,6 +1,5 @@
 import { RecommendationGrid } from '@/shared/components/ui/RecommendationGrid'
 import { Loader } from '@/shared/components/ui/Loader'
-import { mockProducts } from '@/shared/data/mock-products'
 import { useQuery } from '@tanstack/react-query'
 import { databaseService } from '@/services/supabase/database-service'
 import { type ProductRecommendation } from '@/shared/lib/types'
@@ -12,16 +11,14 @@ export default function ProductsPage() {
     queryFn: async () => databaseService.getProducts(),
   })
 
-  const products: ProductRecommendation[] = (data && data.length
-    ? data.map((product) => {
-        const parsed = parseProductTags(product)
-        return {
-          ...parsed,
-          externalLink: product.external_url,
-          reason: `Catalog pick tagged for ${parsed.cleanTags.join(', ') || 'general skincare'}.`,
-        }
-      })
-    : mockProducts)
+  const products: ProductRecommendation[] = (data ?? []).map((product) => {
+    const parsed = parseProductTags(product)
+    return {
+      ...parsed,
+      externalLink: product.external_url,
+      reason: `Catalog pick tagged for ${parsed.cleanTags.join(', ') || 'general skincare'}.`,
+    }
+  })
 
   if (isLoading) {
     return <Loader fullScreen label="Loading product catalog" />
@@ -33,7 +30,13 @@ export default function ProductsPage() {
         <p className="text-xs uppercase tracking-[0.22em] text-cyan">Catalog</p>
         <h1 className="mt-3 font-display text-4xl text-pearl">AI Curated Product Library</h1>
       </div>
-      <RecommendationGrid products={products} />
+      {products.length === 0 ? (
+        <div className="rounded-[2rem] border border-rose-100/60 bg-white/80 p-12 text-center text-sm text-mist">
+          Không có sản phẩm nào trong catalog. Vui lòng thêm sản phẩm mới từ trang quản trị.
+        </div>
+      ) : (
+        <RecommendationGrid products={products} />
+      )}
     </section>
   )
 }

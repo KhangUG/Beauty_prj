@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { ScanProductGrid } from '@/shared/components/ui/ScanProductGrid'
-import { mockProducts } from '@/shared/data/mock-products'
 import { databaseService } from '@/services/supabase/database-service'
 import { type ProductRecommendation } from '@/shared/lib/types'
 
@@ -10,18 +9,17 @@ export default function ProductRecommendations() {
     queryFn: async () => databaseService.getProducts(),
   })
 
-  const products: ProductRecommendation[] = (data && data.length
-    ? data.map((product) => ({
-        id: product.id,
-        name: product.name,
-        image: product.image_url,
-        description: product.description,
-        reason: `Featured because it fits ${product.tags.join(', ') || 'core skincare'} needs.`,
-        externalLink: product.external_url,
-        category: product.tags[0] ?? 'skincare',
-      }))
-    : mockProducts
-  ).slice(0, 6)
+  const products: ProductRecommendation[] = (data ?? [])
+    .map((product) => ({
+      id: product.id,
+      name: product.name,
+      image: product.image_url,
+      description: product.description,
+      reason: `Featured because it fits ${product.tags.join(', ') || 'core skincare'} needs.`,
+      externalLink: product.external_url,
+      category: product.tags[0] ?? 'skincare',
+    }))
+    .slice(0, 6)
   const featured = products[0]
 
   return (
@@ -47,7 +45,13 @@ export default function ProductRecommendations() {
       </div>
 
       <div className="rounded-[1.75rem] border border-white/40 bg-white/55 p-4 shadow-[0_24px_60px_rgba(255,192,203,0.12)] backdrop-blur-sm">
-        <ScanProductGrid products={products} />
+        {products.length === 0 ? (
+          <div className="rounded-[1.5rem] border border-rose-100/50 bg-white/80 p-8 text-center text-sm text-mist">
+            Chưa có sản phẩm nào được thêm vào. Vui lòng cập nhật catalog sản phẩm trong trang quản trị.
+          </div>
+        ) : (
+          <ScanProductGrid products={products} />
+        )}
       </div>
     </div>
   )

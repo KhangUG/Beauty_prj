@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase/client'
+import { supabase, type Json } from '@/services/supabase/client'
 import { type ScanResult, type OrderRecord } from '@/shared/lib/types'
 
 type SaveRecommendationInput = {
@@ -13,6 +13,8 @@ export type AdminProductRecord = {
   image_url: string
   external_url: string
   tags: string[]
+  brand: string | null
+  category_id: string
   created_at: string
 }
 
@@ -29,6 +31,24 @@ export type AdminRecommendationRecord = {
   scan_id: string
   product_id: string
   reason: string
+  created_at: string
+}
+
+export type AdminCategoryRecord = {
+  id: string
+  name: string
+  api_category_key: string
+  created_at: string
+}
+
+export type AdminProductConfigRecord = {
+  id: string
+  product_id: string
+  hex_color: string | null
+  texture: string | null
+  color_intensity: string | null
+  pattern_name: string | null
+  extra_params: Json | null
   created_at: string
 }
 
@@ -73,6 +93,52 @@ export const databaseService = {
 
   async deleteProduct(id: string) {
     const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  async getAdminCategories() {
+    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as AdminCategoryRecord[]
+  },
+
+  async createCategory(input: Omit<AdminCategoryRecord, 'id' | 'created_at'>) {
+    const { data, error } = await supabase.from('categories').insert(input).select('*').single()
+    if (error) throw error
+    return data as AdminCategoryRecord
+  },
+
+  async updateCategory(id: string, input: Partial<Omit<AdminCategoryRecord, 'id' | 'created_at'>>) {
+    const { data, error } = await supabase.from('categories').update(input).eq('id', id).select('*').single()
+    if (error) throw error
+    return data as AdminCategoryRecord
+  },
+
+  async deleteCategory(id: string) {
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  async getAdminProductConfigs() {
+    const { data, error } = await supabase.from('product_configs').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as AdminProductConfigRecord[]
+  },
+
+  async createProductConfig(input: Omit<AdminProductConfigRecord, 'id' | 'created_at'>) {
+    const { data, error } = await supabase.from('product_configs').insert(input).select('*').single()
+    if (error) throw error
+    return data as AdminProductConfigRecord
+  },
+
+  async updateProductConfig(id: string, input: Partial<Omit<AdminProductConfigRecord, 'id' | 'created_at'>>) {
+    const { data, error } = await supabase.from('product_configs').update(input).eq('id', id).select('*').single()
+    if (error) throw error
+    return data as AdminProductConfigRecord
+  },
+
+  async deleteProductConfig(id: string) {
+    const { error } = await supabase.from('product_configs').delete().eq('id', id)
     if (error) throw error
   },
 

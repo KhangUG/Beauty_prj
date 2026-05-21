@@ -47,6 +47,10 @@ export function parseProductTags(product: AdminProductRecord): ParsedProduct {
     }
   }
 
+  if (product.price !== null && product.price !== undefined) {
+    price = `$${Number(product.price).toFixed(2)}`
+  }
+
   // Capitalize category
   if (category) {
     category = category.charAt(0).toUpperCase() + category.slice(1)
@@ -72,10 +76,6 @@ export function parseProductTags(product: AdminProductRecord): ParsedProduct {
 export function encodeProductTags(params: {
   tags: string[]
   category: string
-  price: string
-  originalPrice: string
-  discount: string | number
-  stock: string | number
 }): string[] {
   // Filter out any existing metadata tags
   const cleanTags = params.tags.filter(
@@ -92,18 +92,6 @@ export function encodeProductTags(params: {
   const metadataTags: string[] = []
   if (params.category) {
     metadataTags.push(`cat:${params.category.trim()}`)
-  }
-  if (params.price) {
-    metadataTags.push(`price:${params.price.toString().replace('$', '').trim()}`)
-  }
-  if (params.originalPrice) {
-    metadataTags.push(`orig:${params.originalPrice.toString().replace('$', '').trim()}`)
-  }
-  if (params.discount !== undefined && params.discount !== '') {
-    metadataTags.push(`disc:${params.discount}`)
-  }
-  if (params.stock !== undefined && params.stock !== '') {
-    metadataTags.push(`stock:${params.stock}`)
   }
 
   return [...cleanTags, ...metadataTags]

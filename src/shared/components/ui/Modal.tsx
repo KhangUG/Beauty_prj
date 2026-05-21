@@ -20,7 +20,11 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
           onClick={onClose}
         >
           <motion.div
-            className="glass-panel w-full max-w-lg rounded-3xl p-6"
+            className="glass-panel w-full max-w-lg rounded-3xl p-6 max-h-[92vh] overflow-y-auto scrollbar-thin scrollbar-thumb-rose-200/50 scrollbar-track-transparent"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(244, 63, 94, 0.2) transparent'
+            }}
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}

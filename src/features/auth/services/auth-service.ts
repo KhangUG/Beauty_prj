@@ -1,9 +1,24 @@
 import { supabase } from '@/services/supabase/client'
+import type { UserProfile } from '@/shared/types/auth'
 
 export const authService = {
   async getSession() {
     const { data } = await supabase.auth.getSession()
     return data.session
+  },
+
+  async getProfile(userId: string): Promise<UserProfile | null> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching profile:', error)
+      return null
+    }
+    return data as UserProfile
   },
 
   async signIn(email: string, password: string) {
@@ -12,8 +27,40 @@ export const authService = {
     return data
   },
 
-  async signUp(email: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  async signUp(email: string, password: string, firstName?: string, lastName?: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName
+        }
+      }
+    })
+    if (error) throw error
+    return data
+  },
+
+  async signInWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+    if (error) throw error
+    return data
+  },
+  async resetPasswordForEmail(email: string) {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    })
+    if (error) throw error
+    return data
+  },
+  async updatePassword(password: string) {
+    const { data, error } = await supabase.auth.updateUser({ password })
     if (error) throw error
     return data
   },

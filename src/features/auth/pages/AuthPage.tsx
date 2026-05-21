@@ -86,7 +86,7 @@ export default function AuthPage() {
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
           {mode === 'signup' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 placeholder="First Name"
                 value={firstName}

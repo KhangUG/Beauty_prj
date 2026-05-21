@@ -263,7 +263,7 @@ export default function AIScanPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-xs md:min-w-[360px]">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               {[
                 ['Upload', 'Selfie or webcam'],
                 ['Analyze', 'Texture and hydration'],
@@ -372,12 +372,12 @@ export default function AIScanPage() {
             </div>
 
             <div className="space-y-5 p-6">
-              <div className="grid gap-5 xl:grid-cols-[280px,1fr]">
+              <div className="grid gap-5 grid-cols-1 xl:grid-cols-[280px,1fr]">
                 <div className="relative overflow-hidden rounded-[1.75rem] border border-rose-100/40 bg-[linear-gradient(180deg,rgba(255,250,250,0.95),rgba(255,250,250,0.88))] shadow-sm">
                   <div className="border-b border-rose-100/40 px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-400">Preview</p>
                   </div>
-                  <div className="relative flex h-[24rem] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(254,215,222,0.08),transparent_38%),linear-gradient(180deg,rgba(255,250,250,0.84),rgba(255,245,246,0.92))]">
+                  <div className="relative flex h-[18rem] sm:h-[24rem] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(254,215,222,0.08),transparent_38%),linear-gradient(180deg,rgba(255,250,250,0.84),rgba(255,245,246,0.92))]">
                     {webcamOpen ? (
                       <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
                     ) : imagePreview ? (
@@ -394,7 +394,7 @@ export default function AIScanPage() {
 
                 <div className="space-y-4">
                   {scanResult ? (
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         { metric: 'Skin Score', score: scanResult.skinScore, status: 'great' as const, insight: 'Overall quality' },
                         { metric: 'Acne', score: scanResult.acne.value, status: scanResult.acne.status, insight: 'Inflammation level' },
@@ -405,7 +405,7 @@ export default function AIScanPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {[
                         ['Skin Score', 'Awaiting scan'],
                         ['Hydration', 'Pending analysis'],
@@ -444,7 +444,7 @@ export default function AIScanPage() {
                 <h2 className="mt-1 font-display text-2xl font-extrabold text-pearl md:text-3xl">Precision-Matched Skincare</h2>
                 <p className="mt-1 max-w-2xl text-xs text-mist">{recommendationSummary}</p>
               </div>
-              <Link to="/recommendations" className="hidden shrink-0 md:block">
+              <Link to="/recommendations" className="shrink-0 block mt-3 sm:mt-0">
                 <Button variant="ghost" size="sm" className="text-xs">
                   View all →
                 </Button>

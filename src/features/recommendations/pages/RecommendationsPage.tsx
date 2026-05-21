@@ -3,6 +3,7 @@ import { AIResultCard } from '@/shared/components/ui/AIResultCard'
 import { Card } from '@/shared/components/ui/Card'
 import { Loader } from '@/shared/components/ui/Loader'
 import { RecommendationGrid } from '@/shared/components/ui/RecommendationGrid'
+import MobileAccordion from '@/shared/components/ui/MobileAccordion'
 import { mockScanResult } from '@/shared/data/mock-scan'
 import { mockProducts } from '@/shared/data/mock-products'
 import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations'
@@ -125,11 +126,13 @@ export default function RecommendationsPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {metrics.map((item) => (
-          <AIResultCard key={item.metric} metric={item.metric} score={item.score} status={item.status} insight={item.insight} />
-        ))}
-      </div>
+          <MobileAccordion title="Metrics">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {metrics.map((item) => (
+                <AIResultCard key={item.metric} metric={item.metric} score={item.score} status={item.status} insight={item.insight} />
+              ))}
+            </div>
+          </MobileAccordion>
 
       <Card className="p-6">
         <div className="flex items-center justify-between">

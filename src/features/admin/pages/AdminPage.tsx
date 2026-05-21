@@ -1096,7 +1096,7 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="grid gap-3 grid-cols-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Danh mục</label>
                       <select
@@ -1127,7 +1127,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 grid-cols-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Giá bán</label>
                       <div className="relative">

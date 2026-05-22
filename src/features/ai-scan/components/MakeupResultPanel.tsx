@@ -24,11 +24,13 @@ export function MakeupResultPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-rose-100/60 bg-white/90 shadow-sm">
-      <div className="shrink-0 border-b border-rose-100 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-rose-600">Result</p>
-        <p className="mt-1 text-xs text-mist">
-          {isDemo ? 'Preview (demo — add API key for real VTO)' : 'The API returns a download link for the result photo.'}
-        </p>
+      <div className="shrink-0 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <label className="flex flex-col gap-1 text-xl font-semibold text-rose-950">
+            <span className="inline-flex items-center gap-1">Result</span>
+            <span className="text-xs font-normal text-mist">Preview the processed makeup result on the selected image.</span>
+          </label>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">

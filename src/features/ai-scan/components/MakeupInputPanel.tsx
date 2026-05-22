@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { ChevronRight, ExternalLink, Upload } from 'lucide-react'
 import { CategoryEffectEditor } from '@/features/ai-scan/components/CategoryEffectEditor'
 import { Button } from '@/shared/components/ui/Button'
@@ -15,6 +15,7 @@ import {
   MAKEUP_CATEGORY_META,
   SAMPLE_SELFIES,
 } from '@/features/ai-scan/lib/makeup-defaults'
+import { prepareEffectForEnable } from '@/features/ai-scan/lib/makeup-patterns'
 import { cn } from '@/shared/lib/cn'
 
 type InputMode = 'url' | 'upload' | 'sample'
@@ -56,7 +57,12 @@ export function MakeupInputPanel({
   const [mode, setMode] = useState<InputMode>('sample')
   const [urlInput, setUrlInput] = useState('')
   const [showAllSamples, setShowAllSamples] = useState(false)
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [openCategory, setOpenCategory] = useState<string | null>(null)
+
+  const enabledEffects = useMemo(
+    () => effects.filter((effect) => effect.enabled === true),
+    [effects],
+  )
 
   const visibleSamples = showAllSamples ? SAMPLE_SELFIES : SAMPLE_SELFIES.slice(0, 6)
 
@@ -75,51 +81,30 @@ export function MakeupInputPanel({
 
   const toggleCategory = (category: string) => {
     const effect = effects.find((item) => item.category === category)
-    const nextEnabled = !(effect?.enabled !== false)
-    updateEffect(category, { enabled: nextEnabled })
-    if (nextEnabled) {
-      setExpanded((state) => ({ ...state, [category]: true }))
+    const isOn = effect?.enabled === true
+    const nextEnabled = !isOn
+    if (nextEnabled && effect) {
+      onEffectsChange(
+        effects.map((item) => (item.category === category ? prepareEffectForEnable(item) : item)),
+      )
+      setOpenCategory(category)
+    } else {
+      updateEffect(category, { enabled: false })
+      if (openCategory === category) {
+        const remaining = effects.filter((item) => item.enabled === true && item.category !== category)
+        setOpenCategory(remaining[0]?.category ?? null)
+      }
     }
+  }
+
+  const handleEditorToggle = (category: string) => {
+    setOpenCategory((current) => (current === category ? null : category))
   }
 
   return (
     <div className="playground-panel flex h-full min-h-0 flex-col overflow-hidden rounded-[1rem] border border-rose-100 bg-white shadow-sm">
       <div className="playground-panel-inner min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
         <form className="flex flex-col gap-6" onSubmit={(event) => event.preventDefault()}>
-          {/* Authorization */}
-          <PlaygroundSection title="Authorization">
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <label className="inline-flex items-center gap-1 text-sm font-semibold text-rose-950">
-                  API Key
-                  <span className="text-[10px] font-normal text-mist">(from .env)</span>
-                </label>
-                <a
-                  href="https://yce.makeupar.com/api-console/en/api-keys/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-700 underline"
-                >
-                  Get API Key
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-              <div className="flex h-9 w-full items-center justify-between rounded-sm border border-rose-200 bg-white px-3 text-sm shadow-sm">
-                <span className="truncate text-rose-950">
-                  {apiConfigured ? 'VITE_MAKEUP_API_KEY configured' : 'Demo mode — no API key'}
-                </span>
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
-                    apiConfigured ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700',
-                  )}
-                >
-                  {apiConfigured ? 'Active' : 'Demo'}
-                </span>
-              </div>
-            </div>
-          </PlaygroundSection>
-
           {/* User Photo */}
           <PlaygroundSection>
             <PlaygroundFieldLabel
@@ -220,7 +205,7 @@ export function MakeupInputPanel({
               <div className="grid grid-cols-2 gap-3">
                 {effects.map((effect) => {
                   const meta = MAKEUP_CATEGORY_META[effect.category]
-                  const isOn = effect.enabled !== false
+                  const isOn = effect.enabled === true
                   return (
                     <PlaygroundCheckbox
                       key={effect.category}
@@ -233,20 +218,17 @@ export function MakeupInputPanel({
               </div>
             </div>
 
-            <div className="space-y-2">
-              {effects
-                .filter((effect) => effect.enabled !== false)
-                .map((effect) => (
+            {enabledEffects.length > 0 ? (
+              <div className="space-y-2">
+                {enabledEffects.map((effect) => (
                   <CategoryEffectEditor
                     key={effect.category}
                     effect={effect}
-                    isOpen={expanded[effect.category] ?? true}
-                    onToggle={() =>
-                      setExpanded((state) => ({
-                        ...state,
-                        [effect.category]: !(state[effect.category] ?? true),
-                      }))
+                    collapsible={enabledEffects.length > 1}
+                    isOpen={
+                      enabledEffects.length === 1 ? true : openCategory === effect.category
                     }
+                    onToggle={() => handleEditorToggle(effect.category)}
                     onChange={(next) =>
                       onEffectsChange(
                         effects.map((item) => (item.category === effect.category ? next : item)),
@@ -254,7 +236,8 @@ export function MakeupInputPanel({
                     }
                   />
                 ))}
-            </div>
+              </div>
+            ) : null}
           </PlaygroundSection>
         </form>
       </div>

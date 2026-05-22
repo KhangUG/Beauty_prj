@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
@@ -8,15 +8,20 @@ import type { MakeupEffect, MakeupPalette, MakeupTexture } from '@/features/ai-s
 import { MAKEUP_CATEGORY_META } from '@/features/ai-scan/lib/makeup-defaults'
 import {
   applyPatternSelection,
+  categoryNeedsPatternFirst,
   findPatternItem,
   getActivePatternLabel,
+  getPatternColorCount,
   hasPatternCatalog,
+  isPatternChosen,
+  syncEffectPaletteCount,
 } from '@/features/ai-scan/lib/makeup-patterns'
 import { cn } from '@/shared/lib/cn'
 
 type CategoryEffectEditorProps = {
   effect: MakeupEffect
   isOpen: boolean
+  collapsible?: boolean
   onToggle: () => void
   onChange: (effect: MakeupEffect) => void
 }
@@ -55,7 +60,7 @@ function ColorPaletteFields({
           type="color"
           value={palette.color ?? '#FF0000'}
           onChange={(event) => onChange({ color: event.target.value })}
-          className="h-9 w-10 shrink-0 cursor-pointer rounded border border-rose-200"
+          className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-transparent p-0 outline-none"
         />
       </div>
 
@@ -91,7 +96,13 @@ function ColorPaletteFields({
   )
 }
 
-export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: CategoryEffectEditorProps) {
+export function CategoryEffectEditor({
+  effect,
+  isOpen,
+  collapsible = true,
+  onToggle,
+  onChange,
+}: CategoryEffectEditorProps) {
   const meta = MAKEUP_CATEGORY_META[effect.category]
   const [pickerOpen, setPickerOpen] = useState(false)
   const catalogQuery = usePatternCatalog(
@@ -104,25 +115,44 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
     [catalogQuery.data, patternLabel],
   )
 
+  useEffect(() => {
+    if (!catalogQuery.data?.length) return
+    const synced = syncEffectPaletteCount(effect, catalogQuery.data)
+    if ((synced.palettes?.length ?? 0) !== (effect.palettes?.length ?? 0)) {
+      onChange(synced)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync palette slots when pattern/catalog changes
+  }, [catalogQuery.data, effect.pattern?.name, effect.shape?.name, effect.category])
+
+  const needsPattern = categoryNeedsPatternFirst(effect.category)
+  const patternSelected = !needsPattern || isPatternChosen(effect)
+  const paletteCount = getPatternColorCount(patternLabel, patternPreview)
+
   const updatePalette = (index: number, patch: Partial<MakeupPalette>) => {
     const palettes = [...(effect.palettes ?? [{ color: '#FF0000', colorIntensity: 50 }])]
     palettes[index] = { ...palettes[index], ...patch }
     onChange({ ...effect, palettes })
   }
 
-  const paletteCount = effect.palettes?.length ?? 1
+  const showDetailFields = patternSelected
 
   return (
     <>
       <div className="rounded-lg border border-rose-100 bg-white">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between px-3 py-2.5 text-left"
-          onClick={onToggle}
-        >
-          <span className="text-sm font-semibold text-rose-950">{meta?.label ?? effect.category}</span>
-          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        {collapsible ? (
+          <button
+            type="button"
+            className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+            onClick={onToggle}
+          >
+            <span className="text-sm font-semibold text-rose-950">{meta?.label ?? effect.category}</span>
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        ) : (
+          <div className="px-3 py-2.5">
+            <span className="text-sm font-semibold text-rose-950">{meta?.label ?? effect.category}</span>
+          </div>
+        )}
 
         {isOpen ? (
           <div className="space-y-4 border-t border-rose-100 px-3 py-3">
@@ -160,33 +190,49 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                 {hasPatternCatalog(effect.category) ? (
                   <div className="grid gap-2">
                     <FieldLabel>Pattern</FieldLabel>
-                    <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3">
-                      {patternPreview?.thumbnail ? (
-                        <img
-                          src={patternPreview.thumbnail}
-                          alt={patternLabel ?? 'pattern'}
-                          className="mx-auto h-24 w-24 object-contain"
-                        />
-                      ) : (
-                        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded bg-white text-xs text-mist">
-                          Preview
+                    {!patternSelected ? (
+                      <>
+                        <p className="text-xs leading-relaxed text-mist">
+                          We support multiple application patterns. Click the button below to choose the pattern you
+                          want.
+                        </p>
+                        <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="mx-auto flex w-full border border-rose-200 bg-white"
+                            onClick={() => setPickerOpen(true)}
+                          >
+                            Choose pattern
+                          </Button>
                         </div>
-                      )}
-                      <p className="mt-2 text-center text-sm font-medium text-rose-900">{patternLabel ?? '—'}</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mx-auto mt-2 flex w-full max-w-[200px] border border-rose-200 bg-white"
-                        onClick={() => setPickerOpen(true)}
-                      >
-                        Choose pattern
-                      </Button>
-                    </div>
+                      </>
+                    ) : (
+                      <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3">
+                        {patternPreview?.thumbnail ? (
+                          <img
+                            src={patternPreview.thumbnail}
+                            alt={patternLabel ?? 'pattern'}
+                            className="mx-auto h-24 w-24 object-contain"
+                          />
+                        ) : null}
+                        <p className="mt-2 text-center text-sm font-medium text-rose-900">{patternLabel}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mx-auto mt-2 flex w-full max-w-[200px] border border-rose-200 bg-white"
+                          onClick={() => setPickerOpen(true)}
+                        >
+                          Choose pattern
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
 
-                {effect.category === 'eyebrows' ? (
+                {showDetailFields && effect.category === 'eyebrows' ? (
                   <div className="grid gap-3">
                     <div>
                       <FieldLabel hint="0~100">Curvature</FieldLabel>
@@ -233,7 +279,7 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                   </div>
                 ) : null}
 
-                {effect.category === 'concealer' ? (
+                {showDetailFields && effect.category === 'concealer' ? (
                   <div className="space-y-3">
                     <ColorPaletteFields
                       index={0}
@@ -261,7 +307,7 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                   </div>
                 ) : null}
 
-                {effect.category === 'foundation' ? (
+                {showDetailFields && effect.category === 'foundation' ? (
                   <div className="space-y-3">
                     <ColorPaletteFields
                       index={0}
@@ -289,7 +335,7 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                   </div>
                 ) : null}
 
-                {effect.category === 'lip_liner' ? (
+                {showDetailFields && effect.category === 'lip_liner' ? (
                   <div className="space-y-3">
                     <ColorPaletteFields
                       index={0}
@@ -318,7 +364,8 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                   </div>
                 ) : null}
 
-                {!['skin_smooth', 'concealer', 'foundation', 'lip_liner'].includes(effect.category) ? (
+                {showDetailFields &&
+                !['skin_smooth', 'concealer', 'foundation', 'lip_liner'].includes(effect.category) ? (
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-rose-950">Color</p>
                     {Array.from({ length: paletteCount }).map((_, index) => (
@@ -326,7 +373,7 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
                         key={index}
                         index={index}
                         palette={effect.palettes?.[index] ?? { color: '#FF0000', texture: 'matte', colorIntensity: 50 }}
-                        showTexture={meta?.hasTexture && index === 0}
+                        showTexture={meta?.hasTexture}
                         onChange={(patch) => updatePalette(index, patch)}
                       />
                     ))}
@@ -340,6 +387,7 @@ export function CategoryEffectEditor({ effect, isOpen, onToggle, onChange }: Cat
 
       <PatternPickerModal
         open={pickerOpen}
+        effectCategory={effect.category}
         title={effect.category === 'lip_color' ? 'Choose lip shape' : 'Choose a pattern'}
         catalog={catalogQuery.data ?? []}
         isLoading={catalogQuery.isLoading}

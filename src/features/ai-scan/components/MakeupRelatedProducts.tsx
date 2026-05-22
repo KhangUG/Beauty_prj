@@ -25,11 +25,13 @@ function toGridProduct(product: MatchedMakeupProduct): ProductRecommendation & {
 export function MakeupRelatedProducts({ products, isLoading, activeCategories }: MakeupRelatedProductsProps) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-rose-100/60 bg-white/90 shadow-sm">
-      <div className="shrink-0 border-b border-rose-100 px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-rose-600">Related Products</p>
-        <p className="mt-1 text-xs text-mist">
-          Matched from catalog by effect category, color, texture and pattern.
-        </p>
+      <div className="shrink-0 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <label className="flex flex-col gap-1 text-xl font-semibold text-rose-950">
+            <span className="inline-flex items-center gap-1">Related Products</span>
+            <span className="text-xs font-normal text-mist">Browse matching products that align with your selected makeup effect.</span>
+          </label>
+        </div>
         {activeCategories.length > 0 ? (
           <p className="mt-2 text-[10px] text-rose-600">
             Active: {activeCategories.join(', ')}

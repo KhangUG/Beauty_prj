@@ -1,4 +1,5 @@
 import type { MakeupEffect } from '@/features/ai-scan/types/makeup-vto'
+import { categoryNeedsPatternFirst, isPatternChosen } from '@/features/ai-scan/lib/makeup-patterns'
 
 export const MAKEUP_CATEGORY_META: Record<
   string,
@@ -62,84 +63,34 @@ export const SAMPLE_SELFIES: SampleSelfie[] = [
 export const SAMPLE_SELFIE_URLS = SAMPLE_SELFIES.map((sample) => sample.fullUrl)
 
 export const DEFAULT_MAKEUP_EFFECTS: MakeupEffect[] = [
-  {
-    category: 'blush',
-    enabled: true,
-    pattern: { name: '2colors1' },
-    palettes: [
-      { color: '#FF0000', texture: 'matte', colorIntensity: 50 },
-      { color: '#F2A53E', texture: 'matte', colorIntensity: 50 },
-    ],
-  },
-  {
-    category: 'bronzer',
-    enabled: true,
-    pattern: { name: 'Bronzer2' },
-    palettes: [{ color: '#9F7C50', colorIntensity: 50 }],
-  },
+  { category: 'blush', enabled: false },
+  { category: 'bronzer', enabled: false },
   {
     category: 'concealer',
-    enabled: true,
+    enabled: false,
     palettes: [{ color: '#FBF5E9', colorIntensity: 50, colorUnderEyeIntensity: 50, coverageLevel: 50 }],
   },
-  {
-    category: 'contour',
-    enabled: true,
-    pattern: { name: 'HeartFace2' },
-    palettes: [{ color: '#9F7C50', colorIntensity: 50 }],
-  },
-  {
-    category: 'eye_liner',
-    enabled: true,
-    pattern: { name: 'Arabic3' },
-    palettes: [{ color: '#000000', texture: 'matte', colorIntensity: 50 }],
-  },
-  {
-    category: 'eye_shadow',
-    enabled: true,
-    pattern: { name: '1color2' },
-    palettes: [{ color: '#FF0000', texture: 'matte', colorIntensity: 50 }],
-  },
-  {
-    category: 'eyebrows',
-    enabled: true,
-    pattern: { type: 'shape', name: 'Arrow1', curvature: 50, thickness: 50, definition: 50 },
-    palettes: [{ color: '#000000', colorIntensity: 50, texture: 'matte' }],
-  },
-  {
-    category: 'eyelashes',
-    enabled: true,
-    pattern: { name: 'Artistic1' },
-    palettes: [{ color: '#000000', colorIntensity: 50 }],
-  },
+  { category: 'contour', enabled: false },
+  { category: 'eye_liner', enabled: false },
+  { category: 'eye_shadow', enabled: false },
+  { category: 'eyebrows', enabled: false },
+  { category: 'eyelashes', enabled: false },
   {
     category: 'foundation',
-    enabled: true,
+    enabled: false,
     palettes: [{ color: '#EAC595', colorIntensity: 50, coverageIntensity: 50, glowIntensity: 0 }],
   },
-  {
-    category: 'highlighter',
-    enabled: true,
-    pattern: { name: 'HeartFace4' },
-    palettes: [{ color: '#FFF7F8', colorIntensity: 50, glowIntensity: 50 }],
-  },
+  { category: 'highlighter', enabled: false },
   {
     category: 'lip_color',
-    enabled: true,
-    shape: { name: 'heart-shaped' },
+    enabled: false,
     style: { type: 'full' },
     morphology: { fullness: 0, wrinkless: 0 },
-    palettes: [{ color: '#FF0000', texture: 'matte', colorIntensity: 50 }],
   },
-  {
-    category: 'lip_liner',
-    enabled: true,
-    pattern: { name: 'Large&Full1' },
-    palettes: [{ color: '#FF0000', texture: 'matte', colorIntensity: 50, thickness: 50, smoothness: 50 }],
-  },
+  { category: 'lip_liner', enabled: false },
   {
     category: 'skin_smooth',
-    enabled: true,
+    enabled: false,
     skinSmoothStrength: 50,
     skinSmoothColorIntensity: 50,
   },
@@ -155,10 +106,11 @@ export function stripEffectForApi(effect: MakeupEffect): MakeupEffect {
 
 export function buildApiEffects(effects: MakeupEffect[]): MakeupEffect[] {
   return effects
-    .filter((effect) => effect.enabled !== false)
+    .filter((effect) => effect.enabled === true)
     .map(stripEffectForApi)
     .filter((effect) => {
       if (effect.category === 'skin_smooth') return true
+      if (categoryNeedsPatternFirst(effect.category) && !isPatternChosen(effect)) return false
       return (effect.palettes?.length ?? 0) > 0
     })
 }

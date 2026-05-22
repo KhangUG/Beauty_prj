@@ -4,7 +4,6 @@ import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
 import { Modal } from '@/shared/components/ui/Modal'
 import { useEffect, useState } from 'react'
-import { CheckoutModal } from '@/shared/components/ui/CheckoutModal'
 
 type ProductCardProps = {
   product: ProductRecommendation
@@ -13,7 +12,6 @@ type ProductCardProps = {
 
 export function ProductCard({ product, ctaVariant }: ProductCardProps) {
   const [modalOpen, setModalOpen] = useState(false)
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(product.stock && product.stock <= 5 ? product.stock * 3600 : null)
 
   useEffect(() => {
@@ -66,20 +64,22 @@ export function ProductCard({ product, ctaVariant }: ProductCardProps) {
         ) : null}
         
         <div className="mt-auto pt-3">
-          <Button
-            variant="primary"
-            onClick={() => setCheckoutOpen(true)}
-            className={`w-full text-xs font-display font-extrabold uppercase tracking-wider py-3.5 justify-center gap-2 shadow-md text-white ${
-                // CTA variant B is more urgent (solid pink) while A is gradient luxury
-                ctaVariant === 'B'
-                  ? 'bg-rose-700 shadow-[0_10px_30px_rgba(200,40,90,0.18)] animate-pulse'
-                  : 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 shadow-rose-500/15'
-              } hover:brightness-105 active:scale-[0.98] transition-all`}
+          <a
+            href={product.externalLink || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`block w-full text-center text-xs font-display font-extrabold uppercase tracking-wider py-3.5 shadow-md text-white ${
+              ctaVariant === 'B'
+                ? 'bg-rose-700 shadow-[0_10px_30px_rgba(200,40,90,0.18)] animate-pulse'
+                : 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 shadow-rose-500/15'
+            } hover:brightness-105 active:scale-[0.98] transition-all ${!product.externalLink ? 'pointer-events-none opacity-60' : ''}`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            Buy Now (Quick Checkout)
-            <ArrowUpRight className="h-3.5 w-3.5 opacity-80" />
-          </Button>
+            <span className="inline-flex items-center justify-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Buy now
+              <ArrowUpRight className="h-3.5 w-3.5 opacity-80" />
+            </span>
+          </a>
 
           {typeof product.stock === 'number' ? (
             <div className="mt-2 flex items-center justify-between text-[12px]">
@@ -120,13 +120,6 @@ export function ProductCard({ product, ctaVariant }: ProductCardProps) {
         </div>
       </Modal>
     ) : null}
-      {checkoutOpen ? (
-        <CheckoutModal
-          open={checkoutOpen}
-          onClose={() => setCheckoutOpen(false)}
-          product={product}
-        />
-      ) : null}
     </Card>
   )
 }

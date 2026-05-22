@@ -81,6 +81,21 @@ export function PlaygroundTabs<T extends string>({ tabs, value, onChange }: Play
   )
 }
 
+function CheckboxMark() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
+      <path
+        d="M3 8.2 6.2 11.4 13 4.6"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function PlaygroundCheckbox({
   checked,
   label,
@@ -91,21 +106,23 @@ export function PlaygroundCheckbox({
   onChange: () => void
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3">
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-md text-left transition hover:bg-rose-50/60"
+    >
       <span
         className={cn(
-          'flex h-6 w-6 shrink-0 items-center justify-center rounded border shadow-sm transition',
-          checked ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-rose-200 bg-white',
+          'flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 shadow-sm transition',
+          checked ? 'border-rose-500 bg-rose-500' : 'border-slate-300 bg-white',
         )}
       >
-        {checked ? (
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        ) : null}
+        {checked ? <CheckboxMark /> : null}
       </span>
-      <input type="checkbox" className="sr-only" checked={checked} onChange={onChange} />
       <span className="text-sm text-rose-950">{label}</span>
-    </label>
+    </button>
   )
 }

@@ -27,7 +27,7 @@ export function matchProductsToEffects(
   catalog: MakeupCatalogItem[],
   limit = 12,
 ): MatchedMakeupProduct[] {
-  const activeEffects = effects.filter((effect) => effect.enabled !== false && effect.category !== 'skin_smooth')
+  const activeEffects = effects.filter((effect) => effect.enabled === true && effect.category !== 'skin_smooth')
   const matches: MatchedMakeupProduct[] = []
 
   for (const effect of activeEffects) {

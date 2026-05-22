@@ -39,7 +39,7 @@ export default function AIScanPage() {
   const catalogQuery = useMakeupCatalog()
 
   const activeCategories = useMemo(
-    () => effects.filter((effect) => effect.enabled !== false).map((effect) => effect.category),
+    () => effects.filter((effect) => effect.enabled === true).map((effect) => effect.category),
     [effects],
   )
 

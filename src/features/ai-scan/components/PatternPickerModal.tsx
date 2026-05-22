@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import type { PatternCatalogItem } from '@/features/ai-scan/lib/makeup-patterns'
-import { getPatternTabGroups } from '@/features/ai-scan/lib/makeup-patterns'
+import { getPatternTabGroups, isColorPatternCategory } from '@/features/ai-scan/lib/makeup-patterns'
 import { cn } from '@/shared/lib/cn'
+
+const COLOR_TAB_LABELS = ['1 color', '2 colors', '3 colors'] as const
 
 type PatternPickerModalProps = {
   open: boolean
   title?: string
+  effectCategory?: string
   catalog: PatternCatalogItem[]
   isLoading: boolean
   selectedLabel?: string
@@ -19,6 +22,7 @@ type PatternPickerModalProps = {
 export function PatternPickerModal({
   open,
   title = 'Choose a pattern',
+  effectCategory,
   catalog,
   isLoading,
   selectedLabel,
@@ -27,19 +31,53 @@ export function PatternPickerModal({
 }: PatternPickerModalProps) {
   const [search, setSearch] = useState('')
   const [pendingLabel, setPendingLabel] = useState(selectedLabel)
-  const tabGroups = useMemo(() => getPatternTabGroups(catalog), [catalog])
-  const [activeTab, setActiveTab] = useState(tabGroups[0]?.name ?? '')
+  const isColorCategory = isColorPatternCategory(effectCategory)
 
-  useEffect(() => {
-    if (!tabGroups.length) return
-    if (!tabGroups.some((tab) => tab.name === activeTab)) {
-      setActiveTab(tabGroups[0].name)
+  const tabGroups = useMemo(() => {
+    if (isColorCategory && catalog.length === 0) {
+      return COLOR_TAB_LABELS.map((name) => ({ name, items: [] as PatternCatalogItem[] }))
     }
-  }, [activeTab, tabGroups])
+    return getPatternTabGroups(catalog, effectCategory)
+  }, [catalog, effectCategory, isColorCategory])
+
+  const [activeTab, setActiveTab] = useState<string>(COLOR_TAB_LABELS[0])
+  const wasOpenRef = useRef(false)
+  const catalogSyncedRef = useRef(false)
+
+  const resolveInitialTab = () => {
+    if (catalog.length > 0 && selectedLabel) {
+      const tabForSelection = getPatternTabGroups(catalog, effectCategory).find((tab) =>
+        tab.items.some((item) => item.label === selectedLabel),
+      )
+      if (tabForSelection) return tabForSelection.name
+    }
+    if (isColorCategory) return COLOR_TAB_LABELS[0]
+    return tabGroups[0]?.name ?? COLOR_TAB_LABELS[0]
+  }
 
   useEffect(() => {
-    if (open) setPendingLabel(selectedLabel)
-  }, [open, selectedLabel])
+    if (!open) {
+      wasOpenRef.current = false
+      catalogSyncedRef.current = false
+      return
+    }
+
+    const justOpened = !wasOpenRef.current
+    wasOpenRef.current = true
+
+    if (justOpened) {
+      setPendingLabel(selectedLabel)
+      setSearch('')
+      catalogSyncedRef.current = catalog.length > 0
+      setActiveTab(resolveInitialTab())
+      return
+    }
+
+    if (!catalogSyncedRef.current && catalog.length > 0) {
+      catalogSyncedRef.current = true
+      setActiveTab(resolveInitialTab())
+    }
+  }, [open, catalog, selectedLabel, tabGroups, effectCategory, isColorCategory])
 
   const filteredItems = useMemo(() => {
     const group = tabGroups.find((tab) => tab.name === activeTab)?.items ?? catalog
@@ -47,6 +85,8 @@ export function PatternPickerModal({
     if (!query) return group
     return group.filter((item) => item.label.toLowerCase().includes(query))
   }, [activeTab, catalog, search, tabGroups])
+
+  const showTabBar = isColorCategory || tabGroups.length > 1
 
   if (!open) return null
 
@@ -57,7 +97,7 @@ export function PatternPickerModal({
       <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
         <div className="flex items-center gap-3 border-b border-rose-100 px-4 py-3">
           <h3 className="shrink-0 text-lg font-semibold text-rose-950">{title}</h3>
-          <div className="relative flex-1">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" />
             <Input
               className="h-9 pl-9"
@@ -71,28 +111,45 @@ export function PatternPickerModal({
           </button>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto border-b border-rose-100 px-4">
-          {tabGroups.map((tab) => (
-            <button
-              key={tab.name}
-              type="button"
-              onClick={() => setActiveTab(tab.name)}
-              className={cn(
-                'relative shrink-0 px-3 py-2 text-sm font-semibold whitespace-nowrap',
-                activeTab === tab.name ? 'text-cyan-700' : 'text-rose-900 hover:text-cyan-600',
-              )}
-            >
-              {tab.name}
-              {activeTab === tab.name ? (
-                <span className="absolute bottom-0 left-0 h-0.5 w-full bg-cyan-600" />
-              ) : null}
-            </button>
-          ))}
-        </div>
+        {showTabBar ? (
+          <div
+            className="flex shrink-0 gap-1 overflow-x-auto border-b border-rose-200 bg-rose-50/40 px-4"
+            role="tablist"
+          >
+            {(isColorCategory ? COLOR_TAB_LABELS : tabGroups.map((tab) => tab.name)).map((tabName) => {
+              const tab = tabGroups.find((group) => group.name === tabName)
+              const count = tab?.items.length ?? 0
+              const active = activeTab === tabName
+              return (
+                <button
+                  key={tabName}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveTab(tabName)}
+                  className={cn(
+                    'relative shrink-0 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors',
+                    active ? 'text-rose-600' : 'text-rose-900/80 hover:text-rose-600',
+                  )}
+                >
+                  {tabName}
+                  {isColorCategory && count > 0 ? (
+                    <span className="ml-1 text-xs font-normal text-mist">({count})</span>
+                  ) : null}
+                  {active ? (
+                    <span className="absolute right-2 bottom-0 left-2 h-0.5 rounded-full bg-rose-500" />
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {isLoading ? (
             <p className="py-12 text-center text-sm text-mist">Loading patterns...</p>
+          ) : filteredItems.length === 0 ? (
+            <p className="py-12 text-center text-sm text-mist">No patterns in this tab.</p>
           ) : (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
               {filteredItems.map((item) => (
@@ -102,7 +159,9 @@ export function PatternPickerModal({
                   onClick={() => setPendingLabel(item.label)}
                   className={cn(
                     'rounded-lg border p-1 transition',
-                    pendingLabel === item.label ? 'border-cyan-500 ring-2 ring-cyan/30' : 'border-rose-100 hover:border-rose-300',
+                    pendingLabel === item.label
+                      ? 'border-rose-500 ring-2 ring-rose-200'
+                      : 'border-rose-100 hover:border-rose-300',
                   )}
                 >
                   <img src={item.thumbnail} alt={item.label} className="aspect-square w-full rounded object-cover" />

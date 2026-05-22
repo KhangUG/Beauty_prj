@@ -22,11 +22,11 @@ import {
   Search,
   Sliders,
   DollarSign,
-  Package,
   RefreshCw,
   UserCheck,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -42,7 +42,7 @@ import {
   type AdminScanRecord,
 } from '@/services/supabase/database-service'
 import { canAccessAdminSection, getAdminRoleLabel, type AdminSection, type AdminRole } from '@/shared/lib/admin'
-import { parseProductTags, encodeProductTags } from '@/shared/lib/product-tags'
+import { parseProductTags } from '@/shared/lib/product-tags'
 import { type ScanResult, type OrderRecord } from '@/shared/lib/types'
 
 const sidebarSections: Array<{
@@ -68,8 +68,6 @@ type ProductFormState = {
   description: string
   imageUrl: string
   externalUrl: string
-  tags: string
-  category: string
   categoryId: string
   brand: string
 }
@@ -98,7 +96,7 @@ type ProductConfigFormState = {
   productId: string
   hexColor: string
   texture: string
-  colorIntensity: string
+  colorIntensity: number
   patternName: string
   extraParams: string
 }
@@ -109,8 +107,6 @@ const emptyProductForm: ProductFormState = {
   description: '',
   imageUrl: '',
   externalUrl: '',
-  tags: '',
-  category: 'Serum',
   categoryId: '',
   brand: '',
 }
@@ -126,7 +122,7 @@ const emptyProductConfigForm: ProductConfigFormState = {
   productId: '',
   hexColor: '#ffffff',
   texture: 'Smooth',
-  colorIntensity: 'Medium',
+  colorIntensity: 50,
   patternName: '',
   extraParams: '{}',
 }
@@ -144,6 +140,9 @@ const emptyRecommendationForm: RecommendationFormState = {
   reason: '',
 }
 
+const PRODUCT_PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=400&q=80'
+
 function formatDate(value: string) {
   return new Date(value).toLocaleString('vi-VN', {
     month: 'short',
@@ -153,27 +152,13 @@ function formatDate(value: string) {
   })
 }
 
-function formatTags(tags: string[]) {
-  return tags.length > 0 ? tags.join(', ') : 'No tags'
-}
-
-function parseTags(value: string) {
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-}
-
 function mapProductForm(product: AdminProductRecord): ProductFormState {
-  const parsed = parseProductTags(product)
   return {
     id: product.id,
     name: product.name,
-    description: product.description,
-    imageUrl: product.image_url,
-    externalUrl: product.external_url,
-    tags: parsed.cleanTags.join(', '),
-    category: parsed.category,
+    description: product.description ?? '',
+    imageUrl: product.image_url ?? '',
+    externalUrl: product.external_url ?? '',
     categoryId: product.category_id,
     brand: product.brand ?? '',
   }
@@ -443,19 +428,19 @@ export default function AdminPage() {
   // Filtered lists
   const filteredProducts = useMemo(() => {
     const list = productsQuery.data ?? []
+    const normalizedSearch = productSearch.toLowerCase()
     return list.filter((p) => {
-      const parsed = parseProductTags(p)
+      const categoryName = categoriesQuery.data?.find((category) => category.id === p.category_id)?.name ?? ''
       const matchesSearch =
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        p.description.toLowerCase().includes(productSearch.toLowerCase()) ||
-        parsed.cleanTags.some((t) => t.toLowerCase().includes(productSearch.toLowerCase()))
+        p.name.toLowerCase().includes(normalizedSearch) ||
+        (p.brand?.toLowerCase().includes(normalizedSearch) ?? false)
 
       const matchesCat =
         productCategoryFilter === 'All' ||
-        parsed.category.toLowerCase() === productCategoryFilter.toLowerCase()
+        categoryName.toLowerCase() === productCategoryFilter.toLowerCase()
       return matchesSearch && matchesCat
     })
-  }, [productsQuery.data, productSearch, productCategoryFilter])
+  }, [productsQuery.data, productSearch, productCategoryFilter, categoriesQuery.data])
 
   const filteredScans = useMemo(() => {
     const list = scansQuery.data ?? []
@@ -539,24 +524,17 @@ export default function AdminPage() {
   // Mutations
   const saveProductMutation = useMutation({
     mutationFn: async () => {
-      const cleanTagsList = parseTags(productForm.tags)
-      const encodedTags = encodeProductTags({
-        tags: cleanTagsList,
-        category: productForm.category,
-      })
-
       const payload = {
         name: productForm.name.trim(),
-        description: productForm.description.trim(),
-        image_url: productForm.imageUrl.trim(),
-        external_url: productForm.externalUrl.trim() || '',
-        tags: encodedTags,
+        description: productForm.description.trim() || null,
+        image_url: productForm.imageUrl.trim() || null,
+        external_url: productForm.externalUrl.trim() || null,
         brand: productForm.brand.trim() || null,
         category_id: productForm.categoryId,
       }
 
-      if (!payload.name || !payload.description || !payload.image_url) {
-        throw new Error('Please fill in all product details before saving.')
+      if (!payload.name) {
+        throw new Error('Please provide a product name before saving.')
       }
 
       if (!payload.category_id) {
@@ -634,7 +612,7 @@ export default function AdminPage() {
         product_id: productConfigForm.productId,
         hex_color: productConfigForm.hexColor.trim() || null,
         texture: productConfigForm.texture.trim() || null,
-        color_intensity: productConfigForm.colorIntensity.trim() || null,
+        color_intensity: productConfigForm.colorIntensity,
         pattern_name: productConfigForm.patternName.trim() || null,
         extra_params: extraParams,
       }
@@ -1207,9 +1185,9 @@ export default function AdminPage() {
               {/* Product Form */}
               <Card className="border border-rose-100 p-6 self-start bg-white shadow-sm">
                 <AdminSectionTitle
-                  eyebrow="Category Management"
+                  eyebrow="Product Management"
                   title={productForm.id ? 'Edit Product' : 'Add New Product'}
-                  description="Add or edit a product. Prices, inventory, and discounts will be handled upon save."
+                  description="Add or edit a product. Name, brand and category are saved to the catalog."
                 />
                 <div className="mt-5 space-y-4">
                   <div>
@@ -1246,11 +1224,9 @@ export default function AdminPage() {
                         className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
                         value={productForm.categoryId}
                         onChange={(event) => {
-                          const selectedCategory = categoriesQuery.data?.find((category) => category.id === event.target.value)
                           setProductForm((state) => ({
                             ...state,
                             categoryId: event.target.value,
-                            category: selectedCategory?.name ?? event.target.value,
                           }))
                         }}
                       >
@@ -1282,15 +1258,6 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Tags (comma-separated)</label>
-                    <Input
-                      placeholder="sensitive, barrier, peptide"
-                      value={productForm.tags}
-                      onChange={(event) => setProductForm((state) => ({ ...state, tags: event.target.value }))}
-                    />
-                  </div>
-
                   {saveProductMutation.error ? (
                     <p className="text-sm text-rose-500">{saveProductMutation.error.message}</p>
                   ) : null}
@@ -1317,7 +1284,7 @@ export default function AdminPage() {
                     <input
                       type="text"
                       className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
-                      placeholder="Search products by name/description..."
+                      placeholder="Search products by name or brand..."
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                     />
@@ -1341,55 +1308,91 @@ export default function AdminPage() {
                   <AdminSectionTitle
                     eyebrow="Product List"
                     title="Catalog Detail Table"
-                    description="View all products and their details."
+                    description={`${filteredProducts.length} product(s) — image preview, full description, IDs, and partner links.`}
                   />
                   <div className="mt-6 overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="w-full min-w-[960px] text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
-                          <th className="pb-3 pr-3">Product</th>
-                          <th className="pb-3 px-3">Category / Brand</th>
-                          <th className="pb-3 px-3">Pricing / Stock</th>
-                          <th className="pb-3 px-3">Tags</th>
+                          <th className="pb-3 pr-3 w-[72px]">Image</th>
+                          <th className="pb-3 px-3 min-w-[200px]">Product</th>
+                          <th className="pb-3 px-3">Brand</th>
+                          <th className="pb-3 px-3">Category</th>
+                          <th className="pb-3 px-3 min-w-[180px]">Links</th>
+                          <th className="pb-3 px-3 whitespace-nowrap">Created</th>
                           <th className="pb-3 pl-3 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-rose-50">
                         {paginatedProducts.map((product) => {
-                          const parsed = parseProductTags(product)
+                          const categoryName = categoriesQuery.data?.find((category) => category.id === product.category_id)?.name ?? 'Unknown'
+                          const imageSrc = product.image_url?.trim() || PRODUCT_PLACEHOLDER_IMAGE
                           return (
                             <tr key={product.id} className="hover:bg-rose-50/20 text-rose-950 align-top">
                               <td className="py-3 pr-3">
-                                <div className="flex items-start gap-3">
-                                  <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded-lg object-cover border border-rose-50" />
-                                  <div className="min-w-0 max-w-[200px]">
-                                    <p className="font-bold text-sm leading-tight text-rose-950">{product.name}</p>
-                                    <p className="mt-0.5 text-[10px] text-mist line-clamp-2">{product.description}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-mist">
-                                <p className="font-semibold text-rose-600">{parsed.category}</p>
-                                {product.brand && <p className="text-[10px] mt-0.5">{product.brand}</p>}
+                                <img
+                                  src={imageSrc}
+                                  alt={product.name}
+                                  loading="lazy"
+                                  className="h-14 w-14 shrink-0 rounded-xl border border-rose-100 bg-rose-50 object-cover"
+                                  onError={(event) => {
+                                    event.currentTarget.onerror = null
+                                    event.currentTarget.src = PRODUCT_PLACEHOLDER_IMAGE
+                                  }}
+                                />
                               </td>
                               <td className="py-3 px-3">
-                                {parsed.price ? (
-                                  <div className="text-rose-950 font-bold">
-                                    {parsed.price}
-                                    {parsed.discount && <span className="text-rose-500 ml-1 text-[10px]">(-{parsed.discount}%)</span>}
-                                  </div>
-                                ) : (
-                                  <div className="text-mist">—</div>
-                                )}
-                                {parsed.stock !== undefined && (
-                                  <div className={`flex items-center gap-1 mt-0.5 text-[10px] ${parsed.stock <= 5 ? 'text-amber-600 font-bold' : 'text-mist'}`}>
-                                    <Package className="h-3 w-3" />
-                                    {parsed.stock} in stock
-                                  </div>
-                                )}
+                                <div className="min-w-0 max-w-[280px]">
+                                  <p className="font-bold text-sm leading-tight text-rose-950">{product.name}</p>
+                                  <p className="mt-1 font-mono text-[10px] text-mist/80 break-all" title={product.id}>
+                                    ID: {product.id}
+                                  </p>
+                                  <p className="mt-1.5 text-[11px] leading-relaxed text-mist whitespace-pre-wrap break-words">
+                                    {product.description?.trim() || '—'}
+                                  </p>
+                                </div>
                               </td>
-                              <td className="py-3 px-3 text-[10px] text-mist max-w-[150px] truncate">
-                                {formatTags(parsed.cleanTags)}
+                              <td className="py-3 px-3 text-mist whitespace-nowrap">
+                                {product.brand?.trim() || '—'}
+                              </td>
+                              <td className="py-3 px-3">
+                                <p className="font-semibold text-rose-600">{categoryName}</p>
+                                <p className="mt-0.5 font-mono text-[10px] text-mist/70 break-all" title={product.category_id}>
+                                  {product.category_id}
+                                </p>
+                              </td>
+                              <td className="py-3 px-3 text-mist">
+                                <div className="space-y-2 min-w-0 max-w-[220px]">
+                                  {product.image_url?.trim() ? (
+                                    <a
+                                      href={product.image_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all"
+                                    >
+                                      <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" />
+                                      Image URL
+                                    </a>
+                                  ) : (
+                                    <span className="text-[10px]">No image URL</span>
+                                  )}
+                                  {product.external_url?.trim() ? (
+                                    <a
+                                      href={product.external_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all"
+                                    >
+                                      <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" />
+                                      Partner URL
+                                    </a>
+                                  ) : (
+                                    <span className="text-[10px]">No partner URL</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-mist whitespace-nowrap">
+                                {formatDate(product.created_at)}
                               </td>
                               <td className="py-3 pl-3 text-right">
                                 <div className="flex justify-end gap-1">
@@ -1577,12 +1580,18 @@ export default function AdminPage() {
                   </div>
                   <div className="grid gap-3 lg:grid-cols-2">
                     <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Color Intensity</label>
-                      <Input
-                        placeholder="Light / Medium / Intense"
-                        value={productConfigForm.colorIntensity}
-                        onChange={(event) => setProductConfigForm((state) => ({ ...state, colorIntensity: event.target.value }))}
-                      />
+                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Color Intensity (0-100)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={productConfigForm.colorIntensity}
+                          onChange={(event) => setProductConfigForm((state) => ({ ...state, colorIntensity: Number(event.target.value) }))}
+                          className="flex-1 accent-rose-500"
+                        />
+                        <span className="text-sm font-semibold text-rose-950 min-w-[40px] text-right">{productConfigForm.colorIntensity}</span>
+                      </div>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Pattern Name</label>
@@ -1645,15 +1654,19 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-mist break-words max-w-[220px]">{config.extra_params ? JSON.stringify(config.extra_params) : '{}'}</td>
                           <td className="py-3 pl-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => setProductConfigForm({
-                                id: config.id,
-                                productId: config.product_id,
-                                hexColor: config.hex_color ?? '#ffffff',
-                                texture: config.texture ?? 'Smooth',
-                                colorIntensity: config.color_intensity ?? 'Medium',
-                                patternName: config.pattern_name ?? '',
-                                extraParams: config.extra_params ? JSON.stringify(config.extra_params, null, 2) : '{}',
-                              })}>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => setProductConfigForm({
+                                  id: config.id,
+                                  productId: config.product_id,
+                                  hexColor: config.hex_color ?? '#ffffff',
+                                  texture: config.texture ?? 'Smooth',
+                                  colorIntensity: config.color_intensity ?? 50,
+                                  patternName: config.pattern_name ?? '',
+                                  extraParams: config.extra_params ? JSON.stringify(config.extra_params, null, 2) : '{}',
+                                })}
+                              >
                                 Edit
                               </Button>
                               <Button

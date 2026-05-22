@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { ScanProductGrid } from '@/shared/components/ui/ScanProductGrid'
 import { databaseService } from '@/services/supabase/database-service'
+import { parseProductTags } from '@/shared/lib/product-tags'
 import { type ProductRecommendation } from '@/shared/lib/types'
+
+const PRODUCT_PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=400&q=80'
 
 export default function ProductRecommendations() {
   const { data } = useQuery({
@@ -10,15 +14,16 @@ export default function ProductRecommendations() {
   })
 
   const products: ProductRecommendation[] = (data ?? [])
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      image: product.image_url,
-      description: product.description,
-      reason: `Featured because it fits ${product.tags.join(', ') || 'core skincare'} needs.`,
-      externalLink: product.external_url,
-      category: product.tags[0] ?? 'skincare',
-    }))
+    .map((product) => {
+      const parsed = parseProductTags(product)
+      const tagLabel = parsed.cleanTags.join(', ') || parsed.category || product.brand || 'core skincare'
+      return {
+        ...parsed,
+        image: parsed.image || PRODUCT_PLACEHOLDER_IMAGE,
+        reason: `Featured because it fits ${tagLabel} needs.`,
+        externalLink: product.external_url ?? '',
+      }
+    })
     .slice(0, 6)
   const featured = products[0]
 

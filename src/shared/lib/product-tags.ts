@@ -6,8 +6,8 @@ export interface ParsedProduct extends Omit<ProductRecommendation, 'reason' | 'e
   cleanTags: string[]
 }
 
-export function parseProductTags(product: AdminProductRecord): ParsedProduct {
-  const tags = product.tags || []
+export function parseProductTags(product: AdminProductRecord & { tags?: string[] }): ParsedProduct {
+  const tags = product.tags ?? []
   let category = 'Skincare'
   let price = ''
   let originalPrice = ''
@@ -47,10 +47,6 @@ export function parseProductTags(product: AdminProductRecord): ParsedProduct {
     }
   }
 
-  if (product.price !== null && product.price !== undefined) {
-    price = `$${Number(product.price).toFixed(2)}`
-  }
-
   // Capitalize category
   if (category) {
     category = category.charAt(0).toUpperCase() + category.slice(1)
@@ -59,8 +55,8 @@ export function parseProductTags(product: AdminProductRecord): ParsedProduct {
   return {
     id: product.id,
     name: product.name,
-    image: product.image_url,
-    description: product.description,
+    image: product.image_url ?? '',
+    description: product.description ?? '',
     category,
     price,
     originalPrice,

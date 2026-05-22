@@ -17,7 +17,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('signin')
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
+  const from = (location.state as { from?: string } | null)?.from ?? '/'
 
   const authMutation = useMutation({
     mutationFn: async () => {

@@ -1,11 +1,10 @@
 import { Sparkles, X } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/shared/lib/cn'
-import { Button } from '@/shared/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useToast } from '@/shared/hooks/useToast'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { UserAccountMenu } from '@/shared/components/layout/UserAccountMenu'
 
 const navItems = [
   { to: '/', label: 'Home' },
@@ -17,26 +16,21 @@ const navItems = [
 ]
 
 export function AnimatedNavbar() {
-  const { user, signOut, isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const navigate = useNavigate()
+  const location = useLocation()
 
-  const toast = useToast()
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
 
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      toast.success('Signed out')
-      navigate('/auth')
-    } catch (error) {
-      console.error('Sign out failed', error)
-      toast.error('Sign out failed')
+  const visibleNavItems = useMemo(() => {
+    let items = isAdmin ? [...navItems, { to: '/admin', label: 'Admin' }] : [...navItems]
+    if (user) {
+      items = items.filter((item) => item.to !== '/profile')
     }
-  }
-
-  const visibleNavItems = isAdmin
-    ? [...navItems, { to: '/admin', label: 'Admin' }]
-    : navItems
+    return items
+  }, [user, isAdmin])
 
   return (
     <motion.header
@@ -45,7 +39,6 @@ export function AnimatedNavbar() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.2, 0.9, 0.3, 1] }}
     >
-      {/* Desktop / tablet header - hidden on small screens */}
       <div className="glass-panel hidden sm:flex flex-wrap items-center justify-between gap-4 rounded-full px-5 py-3 shadow-[0_24px_70px_rgba(168,112,134,0.16)]">
         <NavLink to="/" className="flex items-center gap-2 font-display text-sm font-semibold tracking-[0.18em] text-pearl">
           <Sparkles className="h-4 w-4 text-cyan" />
@@ -67,9 +60,7 @@ export function AnimatedNavbar() {
             </NavLink>
           ))}
           {user ? (
-            <Button variant="ghost" size="sm" type="button" onClick={handleSignOut}>
-              Sign Out
-            </Button>
+            <UserAccountMenu />
           ) : (
             <NavLink
               to="/auth"
@@ -86,9 +77,8 @@ export function AnimatedNavbar() {
         </nav>
       </div>
 
-      {/* Mobile: hamburger button on top-left */}
       <div className="sm:hidden">
-        <div className="px-3 py-2">
+        <div className="flex items-center justify-between px-3 py-2">
           <button
             aria-label="Open menu"
             className="inline-flex items-center justify-center rounded-md p-2 text-rose-700 bg-white/90 shadow-sm"
@@ -98,10 +88,10 @@ export function AnimatedNavbar() {
               <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
             </svg>
           </button>
+          {user ? <UserAccountMenu /> : null}
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen ? (
         <div className="fixed inset-0 z-60 sm:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
@@ -116,22 +106,30 @@ export function AnimatedNavbar() {
               </button>
             </div>
 
+            {user ? (
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-rose-100 bg-rose-50/50 px-3 py-2">
+                <p className="text-xs font-semibold text-rose-900">Account</p>
+                <UserAccountMenu onNavigate={() => setMobileOpen(false)} />
+              </div>
+            ) : null}
+
             <nav className="mt-6 flex flex-col gap-3 text-sm">
               {visibleNavItems.map((item) => (
-                <NavLink key={item.to} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-50">
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md px-3 py-2 text-rose-800 hover:bg-rose-50"
+                >
                   {item.label}
                 </NavLink>
               ))}
 
-              {user ? (
-                <button onClick={() => { setMobileOpen(false); handleSignOut() }} className="mt-3 rounded-md bg-rose-500 px-3 py-2 text-white">
-                  Sign Out
-                </button>
-              ) : (
+              {!user ? (
                 <NavLink to="/auth" onClick={() => setMobileOpen(false)} className="mt-3 rounded-md border px-3 py-2 text-rose-800">
                   Sign In
                 </NavLink>
-              )}
+              ) : null}
             </nav>
           </div>
         </div>

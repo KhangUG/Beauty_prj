@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { type Session, type User } from '@supabase/supabase-js'
 import { authService } from '@/features/auth/services/auth-service'
 import type { UserProfile, UserRole } from '@/shared/types/auth'
+
 type AuthStore = {
   session: Session | null
   user: User | null
@@ -11,10 +12,42 @@ type AuthStore = {
   initialized: boolean
   setSession: (session: Session | null) => Promise<void>
   initialize: () => Promise<void>
+  refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
 
 let unsubscribeAuth: (() => void) | null = null
+let initPromise: Promise<void> | null = null
+
+async function resolveProfile(userId: string) {
+  const profile = await authService.getProfile(userId)
+  const role: UserRole = profile?.role ?? 'guest'
+  return { profile, role }
+}
+
+/** Load profile outside onAuthStateChange to avoid Supabase auth deadlocks. */
+function scheduleProfileLoad(userId: string) {
+  setTimeout(() => {
+    void resolveProfile(userId)
+      .then(({ profile, role }) => {
+        useAuthStore.setState({ profile, role })
+      })
+      .catch((error) => {
+        console.error('Error loading profile after auth change:', error)
+        useAuthStore.setState({ profile: null, role: 'guest' })
+      })
+  }, 0)
+}
+
+function applySessionFromAuthEvent(session: Session | null) {
+  if (!session?.user) {
+    useAuthStore.setState({ session, user: null, profile: null, role: 'guest' })
+    return
+  }
+
+  useAuthStore.setState({ session, user: session.user })
+  scheduleProfileLoad(session.user.id)
+}
 
 export const useAuthStore = create<AuthStore>((set) => ({
   session: null,
@@ -24,42 +57,85 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isLoading: false,
   initialized: false,
   setSession: async (session) => {
-    let role: UserRole = 'guest'
-    let profile: UserProfile | null = null
-    if (session?.user) {
-      profile = await authService.getProfile(session.user.id)
-      if (profile) role = profile.role
-    }
-    set({ session, user: session?.user ?? null, role, profile })
-  },
-  initialize: async () => {
-    if (unsubscribeAuth) {
-      set({ initialized: true })
+    if (!session?.user) {
+      set({ session: null, user: null, profile: null, role: 'guest' })
       return
     }
 
-    set({ isLoading: true })
-    const session = await authService.getSession()
-    let role: UserRole = 'guest'
-    let profile: UserProfile | null = null
-    if (session?.user) {
-      profile = await authService.getProfile(session.user.id)
-      if (profile) role = profile.role
+    const { profile, role } = await resolveProfile(session.user.id)
+    set({ session, user: session.user, profile, role })
+  },
+  initialize: async () => {
+    if (unsubscribeAuth) {
+      try {
+        const session = await authService.getSession()
+        if (session?.user) {
+          const { profile, role } = await resolveProfile(session.user.id)
+          set({ session, user: session.user, profile, role })
+        } else {
+          set({ session: null, user: null, profile: null, role: 'guest' })
+        }
+      } catch (error) {
+        console.error('Auth refresh failed:', error)
+      } finally {
+        set({ initialized: true, isLoading: false })
+      }
+      return
     }
 
-    set({ session, user: session?.user ?? null, role, profile, isLoading: false, initialized: true })
+    if (initPromise) {
+      return initPromise
+    }
 
-    const subscription = authService.onAuthStateChange(async (_event, nextSession) => {
-      let nextRole: UserRole = 'guest'
-      let nextProfile: UserProfile | null = null
-      if (nextSession?.user) {
-        nextProfile = await authService.getProfile(nextSession.user.id)
-        if (nextProfile) nextRole = nextProfile.role
+    initPromise = (async () => {
+      set({ isLoading: true })
+      try {
+        const session = await authService.getSession()
+        let role: UserRole = 'guest'
+        let profile: UserProfile | null = null
+
+        if (session?.user) {
+          const resolved = await resolveProfile(session.user.id)
+          profile = resolved.profile
+          role = resolved.role
+        }
+
+        set({
+          session,
+          user: session?.user ?? null,
+          role,
+          profile,
+          initialized: true,
+        })
+
+        const subscription = authService.onAuthStateChange((_event, nextSession) => {
+          applySessionFromAuthEvent(nextSession)
+        })
+
+        unsubscribeAuth = () => subscription.data.subscription.unsubscribe()
+      } catch (error) {
+        console.error('Auth initialization failed:', error)
+        set({
+          session: null,
+          user: null,
+          profile: null,
+          role: 'guest',
+          initialized: true,
+        })
+      } finally {
+        set({ isLoading: false })
+        initPromise = null
       }
-      set({ session: nextSession, user: nextSession?.user ?? null, role: nextRole, profile: nextProfile })
-    })
+    })()
 
-    unsubscribeAuth = () => subscription.data.subscription.unsubscribe()
+    return initPromise
+  },
+  refreshProfile: async () => {
+    const userId = useAuthStore.getState().user?.id
+    if (!userId) return
+
+    const { profile, role } = await resolveProfile(userId)
+    set({ profile, role })
   },
   signOut: async () => {
     await authService.signOut()

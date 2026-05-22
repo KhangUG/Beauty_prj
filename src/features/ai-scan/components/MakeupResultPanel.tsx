@@ -1,0 +1,64 @@
+import { Download, Loader2 } from 'lucide-react'
+import { Button } from '@/shared/components/ui/Button'
+import type { MakeupVtoTaskStatus } from '@/features/ai-scan/types/makeup-vto'
+
+type MakeupResultPanelProps = {
+  imageSource: string
+  resultUrl: string | null
+  downloadUrl: string | null
+  status: MakeupVtoTaskStatus
+  isDemo: boolean
+  errorMessage: string | null
+}
+
+export function MakeupResultPanel({
+  imageSource,
+  resultUrl,
+  downloadUrl,
+  status,
+  isDemo,
+  errorMessage,
+}: MakeupResultPanelProps) {
+  const isProcessing = status === 'running' || status === 'queued' || status === 'processing'
+  const preview = resultUrl ?? imageSource
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-rose-100/60 bg-white/90 shadow-sm">
+      <div className="shrink-0 border-b border-rose-100 px-4 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-rose-600">Result</p>
+        <p className="mt-1 text-xs text-mist">
+          {isDemo ? 'Preview (demo — add API key for real VTO)' : 'The API returns a download link for the result photo.'}
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+        {downloadUrl && status === 'success' ? (
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-cyan/20 bg-cyan/5 px-3 py-2">
+            <p className="truncate font-mono text-[10px] text-cyan-800">{downloadUrl.split('/').pop()}</p>
+            <a href={downloadUrl} target="_blank" rel="noreferrer" download>
+              <Button size="sm" variant="ghost" className="gap-1">
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </Button>
+            </a>
+          </div>
+        ) : null}
+
+        <div className="flex min-h-[280px] items-center justify-center">
+          {isProcessing ? (
+            <div className="flex flex-col items-center gap-3 text-sm text-mist">
+              <Loader2 className="h-8 w-8 animate-spin text-cyan" />
+              <p>Analyzing face and applying makeup...</p>
+            </div>
+          ) : errorMessage ? (
+            <div className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div>
+          ) : preview ? (
+            <img src={preview} alt="Makeup result" className="w-full rounded-2xl object-contain" />
+          ) : (
+            <p className="text-sm text-mist">Select an image and start processing.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

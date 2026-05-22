@@ -9,9 +9,9 @@ type ProtectedRouteProps = PropsWithChildren<{
 }>
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const location = useLocation()
-  const { user, role, isAdmin, initialized, isLoading } = useAuth()
+  const { user, role, isAdmin, initialized } = useAuth()
 
-  if (!initialized || isLoading) {
+  if (!initialized) {
     return <Loader fullScreen label="Checking secure session" />
   }
 

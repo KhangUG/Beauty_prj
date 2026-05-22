@@ -31,6 +31,15 @@ Run these scripts in order:
 
 1. `supabase/sql/001_init_schema.sql`
 2. `supabase/sql/002_seed_products.sql`
+3. `supabase/sql/003_product_category_profile.sql` (profiles, categories, products)
+4. `supabase/sql/004_avatars_storage.sql` (**required for profile avatar upload**)
+
+If avatar upload returns `Bucket not found`, run step 4 or create bucket manually:
+
+- Supabase Dashboard → **Storage** → **New bucket**
+- Name: `avatars`
+- Public bucket: **ON**
+- Then run `004_avatars_storage.sql` for RLS policies
 
 What these scripts do:
 

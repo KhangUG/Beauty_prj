@@ -21,8 +21,8 @@ export default function ProductsPage() {
     const parsed = parseProductTags(product)
     return {
       ...parsed,
-      externalLink: product.external_url,
-      reason: `Catalog pick tagged for ${parsed.cleanTags.join(', ') || 'general skincare'}.`,
+      externalLink: product.external_url ?? '',
+      reason: `Catalog pick for ${product.brand ?? 'general skincare'}.`,
     }
   })
 

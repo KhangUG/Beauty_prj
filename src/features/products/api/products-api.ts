@@ -7,11 +7,11 @@ export async function fetchProducts() {
     return products.map((product) => ({
       id: product.id,
       name: product.name,
-      image: product.image_url,
-      description: product.description,
-      reason: `Catalog pick tagged for ${product.tags.join(', ') || 'general skincare'}.`,
-      externalLink: product.external_url,
-      category: product.tags[0] ?? 'skincare',
+      image: product.image_url ?? '',
+      description: product.description ?? '',
+      reason: `Catalog pick for ${product.brand ?? 'skincare'}.`,
+      externalLink: product.external_url ?? '',
+      category: product.brand ?? 'skincare',
     }))
   } catch {
     return []

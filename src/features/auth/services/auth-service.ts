@@ -7,6 +7,21 @@ export const authService = {
     return data.session
   },
 
+  async updateProfile(
+    userId: string,
+    input: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url'>>,
+  ): Promise<UserProfile> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ ...input, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return data as UserProfile
+  },
+
   async getProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await supabase
       .from('profiles')
@@ -46,7 +61,7 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`
+        redirectTo: `${window.location.origin}/`
       }
     })
     if (error) throw error

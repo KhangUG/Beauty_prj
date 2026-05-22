@@ -9,14 +9,12 @@ type SaveRecommendationInput = {
 export type AdminProductRecord = {
   id: string
   name: string
-  description: string
-  image_url: string
-  external_url: string
-  tags: string[]
+  description: string | null
+  image_url: string | null
+  external_url: string | null
   brand: string | null
   category_id: string
   created_at: string
-  price?: number | string | null
 }
 
 export type AdminScanRecord = {
@@ -47,15 +45,13 @@ export type AdminProductConfigRecord = {
   product_id: string
   hex_color: string | null
   texture: string | null
-  color_intensity: string | null
+  color_intensity: number | null
   pattern_name: string | null
   extra_params: Json | null
   created_at: string
 }
 
-type CreateProductInput = Omit<AdminProductRecord, 'id' | 'created_at' | 'price'> & {
-  price?: number | null
-}
+type CreateProductInput = Omit<AdminProductRecord, 'id' | 'created_at'>
 
 type UpdateProductInput = Partial<CreateProductInput>
 
@@ -69,7 +65,60 @@ type UpdateRecommendationInput = Partial<CreateRecommendationInput>
 
 type UpdateScanInput = Partial<Pick<AdminScanRecord, 'score' | 'metrics'>>
 
+export type MakeupCatalogRow = {
+  productId: string
+  name: string
+  description: string | null
+  image: string
+  externalLink: string
+  brand: string | null
+  categoryId: string
+  categoryName: string
+  apiCategoryKey: string
+  hexColor: string | null
+  texture: string | null
+  colorIntensity: number | null
+  patternName: string | null
+}
+
 export const databaseService = {
+  async getMakeupCatalog(): Promise<MakeupCatalogRow[]> {
+    const [{ data: products, error: productsError }, { data: categories, error: categoriesError }, { data: configs, error: configsError }] =
+      await Promise.all([
+        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('categories').select('*'),
+        supabase.from('product_configs').select('*'),
+      ])
+
+    if (productsError) throw productsError
+    if (categoriesError) throw categoriesError
+    if (configsError) throw configsError
+
+    const categoryMap = new Map((categories ?? []).map((category) => [category.id, category as AdminCategoryRecord]))
+    const configMap = new Map((configs ?? []).map((config) => [config.product_id, config as AdminProductConfigRecord]))
+
+    return ((products ?? []) as AdminProductRecord[]).map((product) => {
+      const category = categoryMap.get(product.category_id)
+      const config = configMap.get(product.id)
+
+      return {
+        productId: product.id,
+        name: product.name,
+        description: product.description,
+        image: product.image_url ?? '',
+        externalLink: product.external_url ?? '',
+        brand: product.brand,
+        categoryId: product.category_id,
+        categoryName: category?.name ?? 'Uncategorized',
+        apiCategoryKey: category?.api_category_key ?? 'general',
+        hexColor: config?.hex_color ?? null,
+        texture: config?.texture ?? null,
+        colorIntensity: config?.color_intensity ?? null,
+        patternName: config?.pattern_name ?? null,
+      }
+    })
+  },
+
   async getProducts() {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
     if (error) throw error

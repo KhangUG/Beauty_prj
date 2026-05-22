@@ -11,37 +11,31 @@ export type AppDatabase = {
           id: string
           created_at: string
           name: string
-          description: string
-          image_url: string
-          external_url: string
-          tags: string[]
+          description: string | null
+          image_url: string | null
+          external_url: string | null
           brand: string | null
-          price: number | null
-          category_id: string | null
+          category_id: string
         }
         Insert: {
           id?: string
           created_at?: string
           name: string
-          description: string
-          image_url: string
-          external_url: string
-          tags: string[]
+          description?: string | null
+          image_url?: string | null
+          external_url?: string | null
           brand?: string | null
-          price?: number | null
-          category_id?: string | null
+          category_id: string
         }
         Update: {
           id?: string
           created_at?: string
           name?: string
-          description?: string
-          image_url?: string
-          external_url?: string
-          tags?: string[]
+          description?: string | null
+          image_url?: string | null
+          external_url?: string | null
           brand?: string | null
-          price?: number | null
-          category_id?: string | null
+          category_id?: string
         }
         Relationships: []
       }
@@ -160,4 +154,13 @@ const supabaseEnv = getSupabaseEnv()
 export const supabase = createClient<AppDatabase>(
   supabaseEnv.url,
   supabaseEnv.anonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      // Avoid Web Locks deadlocks when switching browser tabs (orphaned navigator.locks).
+      lock: async (_name, _acquireTimeout, fn) => await fn(),
+    },
+  },
 )

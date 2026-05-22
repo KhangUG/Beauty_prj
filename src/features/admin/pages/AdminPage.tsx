@@ -25,6 +25,8 @@ import {
   Package,
   RefreshCw,
   UserCheck,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -227,6 +229,8 @@ export default function AdminPage() {
   // Filters & Search
   const [productSearch, setProductSearch] = useState('')
   const [productCategoryFilter, setProductCategoryFilter] = useState('All')
+  const [productPage, setProductPage] = useState(1)
+  const productItemsPerPage = 10
 
   const [scanSearch, setScanSearch] = useState('')
   const [scanScoreFilter, setScanScoreFilter] = useState<[number, number]>([0, 100])
@@ -235,6 +239,9 @@ export default function AdminPage() {
   const [recommendationCategoryFilter, setRecommendationCategoryFilter] = useState('All')
 
   const [userSearch, setUserSearch] = useState('')
+
+  const [categoryPage, setCategoryPage] = useState(1)
+  const categoryItemsPerPage = 10
 
   // Revenue state
   const [orderSearch, setOrderSearch] = useState('')
@@ -337,7 +344,7 @@ export default function AdminPage() {
         order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
         order.productName.toLowerCase().includes(orderSearch.toLowerCase()) ||
         order.shippingInfo.name.toLowerCase().includes(orderSearch.toLowerCase())
-      
+
       const matchStatus = orderStatusFilter === 'All' || order.status === orderStatusFilter
       return matchSearch && matchStatus
     })
@@ -351,7 +358,7 @@ export default function AdminPage() {
 
     const totalRevenue = completed.reduce((sum, o) => sum + o.totalPrice, 0)
     const pendingAmount = pending.reduce((sum, o) => sum + o.totalPrice, 0)
-    
+
     // Category Breakdown
     const categoryMap = new Map<string, number>()
     completed.forEach((o) => {
@@ -486,6 +493,17 @@ export default function AdminPage() {
     const list = usersQuery.data ?? []
     return list.filter((u) => u.email.toLowerCase().includes(userSearch.toLowerCase()))
   }, [usersQuery.data, userSearch])
+
+  const paginatedProducts = useMemo(() => {
+    return filteredProducts.slice((productPage - 1) * productItemsPerPage, productPage * productItemsPerPage)
+  }, [filteredProducts, productPage])
+  const totalProductPages = Math.ceil(filteredProducts.length / productItemsPerPage)
+
+  const paginatedCategories = useMemo(() => {
+    const list = categoriesQuery.data ?? []
+    return list.slice((categoryPage - 1) * categoryItemsPerPage, categoryPage * categoryItemsPerPage)
+  }, [categoriesQuery.data, categoryPage])
+  const totalCategoryPages = Math.ceil((categoriesQuery.data?.length ?? 0) / categoryItemsPerPage)
 
   // Overview Stats Setup
   const overviewCards = useMemo(
@@ -836,15 +854,15 @@ export default function AdminPage() {
       const prod = products[Math.floor(Math.random() * products.length)]
       const quantity = Math.floor(Math.random() * 2) + 1
       const price = 250000 + Math.floor(Math.random() * 8) * 50000 // Mock custom price
-      
+
       const firstNames = ['John', 'Jane', 'Michael', 'Emily', 'Chris', 'Sarah', 'David', 'Jessica']
       const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis']
       const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`
       const phone = `098${Math.floor(1000000 + Math.random() * 9000000)}`
       const address = `${Math.floor(Math.random() * 100) + 1} Main St, New York`
-      
+
       const paymentMethods = ['cod', 'momo', 'visa', 'apple'] as const
-      
+
       const newOrder: OrderRecord = {
         id: `BG-${Math.floor(100000 + Math.random() * 900000)}`,
         productId: prod.id,
@@ -941,8 +959,8 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => setActiveSection(section.id)}
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${active
-                      ? 'border-rose-300 bg-rose-50 text-rose-950 shadow-sm'
-                      : 'border-transparent bg-white text-mist hover:border-rose-100 hover:bg-rose-50/60 hover:text-rose-950'
+                    ? 'border-rose-300 bg-rose-50 text-rose-950 shadow-sm'
+                    : 'border-transparent bg-white text-mist hover:border-rose-100 hover:bg-rose-50/60 hover:text-rose-950'
                     }`}
                 >
                   <div className="flex items-start gap-3">
@@ -979,58 +997,60 @@ export default function AdminPage() {
         {/* Content Area */}
         <div className="space-y-6">
           {/* Dashboard Welcome Header */}
-          <Card className="border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-0 overflow-hidden relative">
-            <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.9fr] lg:p-8 relative z-10">
-              <div className="space-y-5">
-                <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">
-                  <Database className="h-4 w-4" />
-                  Supabase Platform Connection
+          {activeSection === 'overview' && (
+            <Card className="border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-0 overflow-hidden relative">
+              <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.9fr] lg:p-8 relative z-10">
+                <div className="space-y-5">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">
+                    <Database className="h-4 w-4" />
+                    Supabase Platform Connection
+                  </div>
+                  <div className="space-y-3">
+                    <h2 className="font-display text-4xl text-rose-950 md:text-5xl">
+                      Operate the entire beauty platform from one place
+                    </h2>
+                    <p className="max-w-2xl text-sm leading-7 text-mist md:text-base">
+                      Real-time Supabase connection is active. Changes to categories, scans, and roles will sync immediately and reflect on the application.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button onClick={() => setActiveSection('products')}>
+                      Manage Products
+                      <PencilLine className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" onClick={() => setActiveSection('scans')}>
+                      Scans & Simulation
+                    </Button>
+                    <Button variant="ghost" onClick={() => setActiveSection('access')}>
+                      Edit User Roles
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <h2 className="font-display text-4xl text-rose-950 md:text-5xl">
-                    Operate the entire beauty platform from one place
-                  </h2>
-                  <p className="max-w-2xl text-sm leading-7 text-mist md:text-base">
-                    Real-time Supabase connection is active. Changes to categories, scans, and roles will sync immediately and reflect on the application.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button onClick={() => setActiveSection('products')}>
-                    Manage Products
-                    <PencilLine className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" onClick={() => setActiveSection('scans')}>
-                    Scans & Simulation
-                  </Button>
-                  <Button variant="ghost" onClick={() => setActiveSection('access')}>
-                    Edit User Roles
-                  </Button>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                {overviewCards.map((card) => {
-                  const Icon = card.icon
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  {overviewCards.map((card) => {
+                    const Icon = card.icon
 
-                  return (
-                    <div key={card.label} className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-sm backdrop-blur">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-cyan">{card.label}</p>
-                          <p className="mt-2 font-display text-3xl text-rose-950">{card.value}</p>
-                          <p className="mt-1 text-xs text-mist">{card.hint}</p>
-                        </div>
-                        <div className="rounded-2xl bg-rose-50 p-3 text-rose-600">
-                          <Icon className="h-5 w-5" />
+                    return (
+                      <div key={card.label} className="rounded-3xl border border-white/80 bg-white/80 p-4 shadow-sm backdrop-blur">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.2em] text-cyan">{card.label}</p>
+                            <p className="mt-2 font-display text-3xl text-rose-950">{card.value}</p>
+                            <p className="mt-1 text-xs text-mist">{card.hint}</p>
+                          </div>
+                          <div className="rounded-2xl bg-rose-50 p-3 text-rose-600">
+                            <Icon className="h-5 w-5" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-            {/* Background design accents */}
-            <div className="absolute right-0 bottom-0 top-0 w-1/3 bg-[radial-gradient(circle_at_bottom_right,rgba(254,200,210,0.45),transparent_70%)] pointer-events-none" />
-          </Card>
+              {/* Background design accents */}
+              <div className="absolute right-0 bottom-0 top-0 w-1/3 bg-[radial-gradient(circle_at_bottom_right,rgba(254,200,210,0.45),transparent_70%)] pointer-events-none" />
+            </Card>
+          )}
 
           {/* OVERVIEW TAB */}
           {activeSection === 'overview' ? (
@@ -1183,7 +1203,7 @@ export default function AdminPage() {
 
           {/* PRODUCTS TAB */}
           {activeSection === 'products' ? (
-            <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="space-y-4">
               {/* Product Form */}
               <Card className="border border-rose-100 p-6 self-start bg-white shadow-sm">
                 <AdminSectionTitle
@@ -1317,88 +1337,100 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-12 bg-white border border-rose-100 rounded-3xl text-mist">
-                    No products match the search or category filter.
-                  </div>
-                ) : null}
-
-                {filteredProducts.map((product) => {
-                  const parsed = parseProductTags(product)
-                  return (
-                    <Card key={product.id} className="border border-rose-100 p-5 bg-white relative">
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="h-24 w-24 rounded-2xl object-cover border border-rose-50"
-                        />
-                        <div className="min-w-0 flex-1 space-y-2">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <h3 className="font-display text-2xl text-rose-950 font-bold leading-tight">{product.name}</h3>
-                              <p className="mt-1 text-xs text-mist line-clamp-2">{product.description}</p>
-                            </div>
-                            <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-600">
-                              {parsed.category}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-rose-950/80 pt-1">
-                            {product.brand && (
-                              <span className="text-rose-600">{product.brand}</span>
-                            )}
-                            {parsed.price && (
-                              <span className="flex items-center gap-1">
-                                Price: <span className="text-rose-600 font-extrabold">{parsed.price}</span>
-                                {parsed.originalPrice && <span className="text-mist/60 line-through text-[10px]">{parsed.originalPrice}</span>}
-                              </span>
-                            )}
-                            {parsed.discount && (
-                              <span className="text-rose-500 font-extrabold">-{parsed.discount}%</span>
-                            )}
-                            {parsed.stock !== undefined && (
-                              <span className={`flex items-center gap-1 ${parsed.stock <= 5 ? 'text-amber-600 font-bold' : 'text-mist/75'}`}>
-                                <Package className="h-3 w-3" />
-                                {parsed.stock} in stock
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-[10px] text-mist/70 leading-none">
-                            Tags: {formatTags(parsed.cleanTags)}
-                          </p>
-
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            <Button size="sm" variant="ghost" onClick={() => setProductForm(mapProductForm(product))}>
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                if (confirm(`Delete ${product.name}?`)) {
-                                  deleteProductMutation.mutate(product.id)
-                                }
-                              }}
-                              disabled={deleteProductMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete product
-                            </Button>
-                          </div>
-                        </div>
+                <Card className="border border-rose-100 p-6 bg-white shadow-sm overflow-x-auto">
+                  <AdminSectionTitle
+                    eyebrow="Product List"
+                    title="Catalog Detail Table"
+                    description="View all products and their details."
+                  />
+                  <div className="mt-6 overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                          <th className="pb-3 pr-3">Product</th>
+                          <th className="pb-3 px-3">Category / Brand</th>
+                          <th className="pb-3 px-3">Pricing / Stock</th>
+                          <th className="pb-3 px-3">Tags</th>
+                          <th className="pb-3 pl-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-rose-50">
+                        {paginatedProducts.map((product) => {
+                          const parsed = parseProductTags(product)
+                          return (
+                            <tr key={product.id} className="hover:bg-rose-50/20 text-rose-950 align-top">
+                              <td className="py-3 pr-3">
+                                <div className="flex items-start gap-3">
+                                  <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded-lg object-cover border border-rose-50" />
+                                  <div className="min-w-0 max-w-[200px]">
+                                    <p className="font-bold text-sm leading-tight text-rose-950">{product.name}</p>
+                                    <p className="mt-0.5 text-[10px] text-mist line-clamp-2">{product.description}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-mist">
+                                <p className="font-semibold text-rose-600">{parsed.category}</p>
+                                {product.brand && <p className="text-[10px] mt-0.5">{product.brand}</p>}
+                              </td>
+                              <td className="py-3 px-3">
+                                {parsed.price ? (
+                                  <div className="text-rose-950 font-bold">
+                                    {parsed.price}
+                                    {parsed.discount && <span className="text-rose-500 ml-1 text-[10px]">(-{parsed.discount}%)</span>}
+                                  </div>
+                                ) : (
+                                  <div className="text-mist">—</div>
+                                )}
+                                {parsed.stock !== undefined && (
+                                  <div className={`flex items-center gap-1 mt-0.5 text-[10px] ${parsed.stock <= 5 ? 'text-amber-600 font-bold' : 'text-mist'}`}>
+                                    <Package className="h-3 w-3" />
+                                    {parsed.stock} in stock
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-[10px] text-mist max-w-[150px] truncate">
+                                {formatTags(parsed.cleanTags)}
+                              </td>
+                              <td className="py-3 pl-3 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button size="sm" variant="ghost" onClick={() => setProductForm(mapProductForm(product))}>
+                                    <PencilLine className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${product.name}?`)) deleteProductMutation.mutate(product.id) }} disabled={deleteProductMutation.isPending}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    {paginatedProducts.length === 0 && (
+                      <div className="text-center py-12 text-mist text-sm">
+                        No products match the search or category filter.
                       </div>
-                    </Card>
-                  )
-                })}
+                    )}
+                  </div>
+                  {totalProductPages > 1 && (
+                    <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
+                      <Button variant="ghost" size="sm" disabled={productPage === 1} onClick={() => setProductPage(p => Math.max(1, p - 1))}>
+                        <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                      </Button>
+                      <span className="text-xs font-semibold text-pearl">Page {productPage} of {totalProductPages}</span>
+                      <Button variant="ghost" size="sm" disabled={productPage === totalProductPages} onClick={() => setProductPage(p => Math.min(totalProductPages, p + 1))}>
+                        Next <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  )}
+                </Card>
               </div>
             </div>
           ) : null}
 
           {/* CATEGORIES TAB */}
           {activeSection === 'categories' ? (
-            <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+            <div className="space-y-4">
               <Card className="border border-rose-100 p-6 bg-white shadow-sm">
                 <AdminSectionTitle
                   eyebrow="Product Categories"
@@ -1453,7 +1485,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-rose-50">
-                      {(categoriesQuery.data ?? []).map((category) => (
+                      {paginatedCategories.map((category) => (
                         <tr key={category.id} className="hover:bg-rose-50/20 text-rose-950">
                           <td className="py-3 pr-3 font-medium">{category.name}</td>
                           <td className="py-3 px-3 text-mist">{category.api_category_key}</td>
@@ -1481,10 +1513,21 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
-                  {(categoriesQuery.data?.length ?? 0) === 0 ? (
-                    <p className="mt-4 text-sm text-mist">No categories available. Create a new category to get started.</p>
+                  {paginatedCategories.length === 0 ? (
+                    <p className="mt-4 text-sm text-mist text-center py-4">No categories available. Create a new category to get started.</p>
                   ) : null}
                 </div>
+                {totalCategoryPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
+                    <Button variant="ghost" size="sm" disabled={categoryPage === 1} onClick={() => setCategoryPage(p => Math.max(1, p - 1))}>
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <span className="text-xs font-semibold text-pearl">Page {categoryPage} of {totalCategoryPages}</span>
+                    <Button variant="ghost" size="sm" disabled={categoryPage === totalCategoryPages} onClick={() => setCategoryPage(p => Math.min(totalCategoryPages, p + 1))}>
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
               </Card>
             </div>
           ) : null}
@@ -1700,8 +1743,8 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => setScanForm(mapScanForm(scan))}
                         className={`w-full rounded-2xl border px-4 py-3 text-left transition ${scanForm.id === scan.id
-                            ? 'border-rose-300 bg-rose-50 text-rose-950'
-                            : 'border-rose-100 bg-white hover:border-rose-200 hover:bg-rose-50/60'
+                          ? 'border-rose-300 bg-rose-50 text-rose-950'
+                          : 'border-rose-100 bg-white hover:border-rose-200 hover:bg-rose-50/60'
                           }`}
                       >
                         <div className="flex items-start justify-between gap-3">

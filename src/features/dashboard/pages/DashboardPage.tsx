@@ -106,8 +106,7 @@ export default function DashboardPage() {
         <Card className="border border-dashed border-rose-200 bg-rose-50/40 p-5">
           <p className="text-xs uppercase tracking-[0.22em] text-rose-600">Why admin is hidden</p>
           <p className="mt-2 text-sm leading-7 text-rose-900">
-            Your current Supabase session is not recognized as an admin. Set <span className="font-semibold">app_metadata.role = admin</span>
-            or <span className="font-semibold">superadmin</span>, or add your email to <span className="font-semibold">VITE_ADMIN_EMAILS</span>, then log in again.
+            Your current Supabase session is not recognized as an admin. Set your profile role to <span className="font-semibold">admin</span> in Supabase, or add your email to <span className="font-semibold">VITE_ADMIN_EMAILS</span>, then log in again.
           </p>
         </Card>
       ) : null}

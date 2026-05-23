@@ -1,5 +1,5 @@
 import { getLocalStorageItem, setLocalStorageItem } from '@/shared/lib/storage'
-import type { UserRole } from '@/shared/types/auth'
+import type { SubscriptionTier } from '@/shared/types/auth'
 import { databaseService } from '@/services/supabase/database-service'
 
 const SCAN_USAGE_STORAGE_KEY = 'ai_scan_usage_history'
@@ -13,7 +13,7 @@ function getUserKey(userId?: string) {
   return userId?.trim() ? userId : GUEST_SCAN_KEY
 }
 
-export function getScanQuotaForRole(role: UserRole | string) {
+export function getScanQuotaForRole(role: SubscriptionTier | string) {
   switch (role) {
     case 'admin':
       return null

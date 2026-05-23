@@ -52,6 +52,15 @@ export type AdminProductConfigRecord = {
   created_at: string
 }
 
+export type AdminUserProfileRecord = {
+  id: string
+  email: string
+  role: string
+  subscription_tier: string
+  updated_at: string
+  created_at: string
+}
+
 type CreateProductInput = Omit<AdminProductRecord, 'id' | 'created_at'>
 
 type UpdateProductInput = Partial<CreateProductInput>
@@ -301,25 +310,66 @@ export const databaseService = {
     if (error) throw error
   },
 
-  getUsersWithRoles() {
+  async getProfiles(): Promise<AdminUserProfileRecord[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, role, subscription_tier, updated_at')
+      .order('email', { ascending: true })
+
+    if (error) throw error
+    return (data ?? []).map((profile: any) => ({
+      ...profile,
+      created_at: profile.updated_at,
+    }))
+  },
+
+  async getUsersWithRoles() {
+    try {
+      const profiles = await this.getProfiles()
+      const stored = localStorage.getItem('lumina_user_roles')
+      let localOverrides: Array<{ id: string; email: string; role: string; created_at: string }> = []
+
+      if (stored) {
+        try {
+          localOverrides = JSON.parse(stored) as Array<{ id: string; email: string; role: string; created_at: string }>
+        } catch {
+          localOverrides = []
+        }
+      }
+
+      const mapped = profiles.map((profile) => {
+        const local = localOverrides.find((u) => u.email.toLowerCase() === profile.email.toLowerCase())
+        return {
+          ...profile,
+          role: local?.role ?? profile.role,
+          created_at: profile.updated_at,
+        }
+      })
+
+      if (mapped.length > 0) {
+        return mapped
+      }
+    } catch {
+      // fallback to local storage when Supabase is not available
+    }
+
     const stored = localStorage.getItem('lumina_user_roles')
     if (stored) {
       try {
         const users = JSON.parse(stored) as Array<{ id: string; email: string; role: string; created_at: string }>
         return users.map((user) => ({
           ...user,
+          role: user.role === 'admin' ? 'admin' : 'user',
           subscription_tier: getSubscriptionTier(user.id) ?? 'free',
+          created_at: user.created_at,
         }))
       } catch {
         // ignore
       }
     }
+
     const defaultUsers = [
-      { id: 'u1', email: 'admin@lumina.ai', role: 'superadmin', created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString() },
-      { id: 'u2', email: 'catalog-manager@lumina.ai', role: 'catalog', created_at: new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString() },
-      { id: 'u3', email: 'operations-lead@lumina.ai', role: 'operations', created_at: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString() },
-      { id: 'u4', email: 'content-writer@lumina.ai', role: 'content', created_at: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString() },
-      { id: 'u5', email: 'analyst-read@lumina.ai', role: 'analyst', created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString() },
+      { id: 'u1', email: 'admin@lumina.ai', role: 'admin', created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString() },
       { id: 'u6', email: 'guest-customer@gmail.com', role: 'user', created_at: new Date().toISOString() },
     ]
     localStorage.setItem('lumina_user_roles', JSON.stringify(defaultUsers))
@@ -327,38 +377,84 @@ export const databaseService = {
     return defaultUsers.map((user) => ({ ...user, subscription_tier: 'free' }))
   },
 
-  updateUserRole(userId: string, role: string) {
-    const users = this.getUsersWithRoles()
-    const updated = users.map((u: any) => (u.id === userId ? { ...u, role } : u))
-    localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
-    return updated
-  },
+  async updateUserRole(userId: string, role: string) {
+    try {
+      const payload = {
+        role,
+        updated_at: new Date().toISOString(),
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', userId)
+        .select('id, email, role, subscription_tier, updated_at')
+        .single()
 
-  updateUserSubscriptionTier(userId: string, subscriptionTier: string) {
-    setSubscriptionTier(userId, subscriptionTier)
-    return this.getUsersWithRoles()
-  },
-
-  createUserWithRole(email: string, role: string, subscriptionTier = 'free') {
-    const users = this.getUsersWithRoles()
-    const newUser = {
-      id: 'u-' + Math.random().toString(36).substr(2, 9),
-      email,
-      role,
-      created_at: new Date().toISOString(),
-      subscription_tier: subscriptionTier,
+      if (error) throw error
+      return [{ ...data, created_at: data.updated_at }]
+    } catch {
+      const users = await this.getUsersWithRoles()
+      const updated = users.map((u: any) => (u.id === userId ? { ...u, role } : u))
+      localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
+      return updated
     }
-    const updated = [...users, newUser]
-    localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
-    setSubscriptionTier(newUser.id, subscriptionTier)
-    return newUser
   },
 
-  deleteUserRole(userId: string) {
-    const users = this.getUsersWithRoles()
-    const updated = users.filter((u: any) => u.id !== userId)
-    localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
-    return updated
+  async updateUserSubscriptionTier(userId: string, subscriptionTier: string) {
+    const payload = {
+      subscription_tier: subscriptionTier,
+      updated_at: new Date().toISOString(),
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', userId)
+      .select('id, email, role, subscription_tier, updated_at')
+      .single()
+
+    if (error) throw error
+    return {
+      ...data,
+      created_at: data.updated_at,
+    }
+  },
+
+  async createUserWithRole(email: string, password: string, role: 'admin' | 'user', subscriptionTier: string = 'free') {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role,
+          subscription_tier: subscriptionTier,
+        },
+      },
+    })
+
+    if (error) throw error
+
+    const userId = data.user?.id ?? data.session?.user?.id
+    if (!userId) {
+      throw new Error('Failed to create new Supabase user account.')
+    }
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .update({ role, subscription_tier: subscriptionTier, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select('id, email, role, subscription_tier, updated_at')
+      .single()
+
+    if (profileError) throw profileError
+
+    return {
+      ...profileData,
+      created_at: profileData.updated_at,
+    }
+  },
+
+  async deleteUserRole(userId: string) {
+    return this.updateUserRole(userId, 'user')
   },
 
   getOrders(): OrderRecord[] {

@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/features/auth/store/auth-store'
-import { getSubscriptionTier } from '@/shared/lib/subscription'
 import { getAdminRole, type AdminRole } from '@/shared/lib/admin'
 import { getAvatarUrl, getDisplayName } from '@/shared/lib/profile'
 
@@ -13,14 +12,15 @@ export function useAuth() {
   const signOut = useAuthStore((state) => state.signOut)
   const refreshProfile = useAuthStore((state) => state.refreshProfile)
 
-  const overrideTier = getSubscriptionTier(user?.id ?? 'guest')
-
   // Compute admin role from session user
   const adminRole: AdminRole | null = role === 'admin' ? 'superadmin' : getAdminRole(session?.user ?? null)
-  const isAdmin = role === 'admin' || !!adminRole
+  const isAdmin = role === 'admin' || !!adminRole || profile?.role === 'admin'
 
   const displayName = getDisplayName(profile, user, user?.id)
   const avatarUrl = getAvatarUrl(profile, user, user?.id)
+  const subscriptionTier = profile?.role === 'admin'
+    ? 'admin'
+    : profile?.subscription_tier ?? profile?.role ?? 'free'
 
   return {
     user,
@@ -29,7 +29,7 @@ export function useAuth() {
     profile,
     displayName,
     avatarUrl,
-    subscriptionTier: overrideTier ?? profile?.subscription_tier ?? 'free',
+    subscriptionTier,
     adminRole,
     isAdmin,
     isLoading,

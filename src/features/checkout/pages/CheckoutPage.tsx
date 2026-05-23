@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { setSubscriptionTier } from '@/shared/lib/subscription'
+import { authService } from '@/features/auth/services/auth-service'
 import { useToast } from '@/shared/hooks/useToast'
 
 const planCards = [
@@ -43,14 +43,23 @@ const planCards = [
 ]
 
 export default function CheckoutPage() {
-  const { user, subscriptionTier } = useAuth()
+  const { user, subscriptionTier, refreshProfile } = useAuth()
   const toast = useToast()
 
   const activePlan = subscriptionTier?.toLowerCase() || 'free'
-  const handleSelectPlan = (planId: string) => {
-    const userId = user?.id ?? 'guest'
-    setSubscriptionTier(userId, planId)
-    toast.success(`Plan updated: ${planId}`)
+  const handleSelectPlan = async (planId: string) => {
+    if (!user?.id) {
+      toast.error('Please sign in to change your plan.')
+      return
+    }
+
+    try {
+      await authService.updateProfile(user.id, { subscription_tier: planId })
+      await refreshProfile()
+      toast.success(`Plan updated: ${planId}`)
+    } catch (error) {
+      toast.error((error as Error).message || 'Could not update plan. Please try again.')
+    }
   }
 
   return (

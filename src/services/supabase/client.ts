@@ -141,6 +141,42 @@ export type AppDatabase = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          id: string
+          email: string
+          first_name: string | null
+          last_name: string | null
+          role: string
+          subscription_tier: string
+          try_on_credits: number
+          avatar_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          first_name?: string | null
+          last_name?: string | null
+          role?: string
+          subscription_tier?: string
+          try_on_credits?: number
+          avatar_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          first_name?: string | null
+          last_name?: string | null
+          role?: string
+          subscription_tier?: string
+          try_on_credits?: number
+          avatar_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

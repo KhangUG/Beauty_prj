@@ -9,11 +9,12 @@ export const authService = {
 
   async updateProfile(
     userId: string,
-    input: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url'>>,
+    input: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url' | 'subscription_tier'>>,
   ): Promise<UserProfile> {
+    const payload = { ...input, updated_at: new Date().toISOString() }
     const { data, error } = await supabase
-      .from('profiles')
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .from('profiles' as const)
+      .update(payload as any)
       .eq('id', userId)
       .select('*')
       .single()

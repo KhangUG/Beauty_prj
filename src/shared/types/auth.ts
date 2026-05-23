@@ -1,4 +1,5 @@
-export type UserRole = 'guest' | 'free' | 'premium' | 'admin'
+export type UserRole = 'guest' | 'user' | 'admin'
+export type SubscriptionTier = 'guest' | 'free' | 'pro' | 'premium'
 
 export interface UserProfile {
   id: string
@@ -6,7 +7,7 @@ export interface UserProfile {
   first_name: string | null
   last_name: string | null
   role: UserRole
-  subscription_tier: string
+  subscription_tier: SubscriptionTier
   try_on_credits: number
   avatar_url: string | null
   updated_at: string

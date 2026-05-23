@@ -234,7 +234,8 @@ export default function AdminPage() {
 
   // User Manager Form
   const [newUserEmail, setNewUserEmail] = useState('')
-  const [newUserRole, setNewUserRole] = useState<AdminRole | 'user'>('analyst')
+  const [newUserPassword, setNewUserPassword] = useState('')
+  const [newUserRole, setNewUserRole] = useState<AdminRole | 'user'>('user')
   const [newUserPlan, setNewUserPlan] = useState<'free' | 'premium' | 'pro'>('free')
 
   // Scan Simulator State
@@ -729,10 +730,14 @@ export default function AdminPage() {
       if (!newUserEmail || !newUserEmail.includes('@')) {
         throw new Error('Please enter a valid email address.')
       }
-      return databaseService.createUserWithRole(newUserEmail, newUserRole, newUserPlan)
+      if (!newUserPassword || newUserPassword.length < 8) {
+        throw new Error('Password must be at least 8 characters.')
+      }
+      return databaseService.createUserWithRole(newUserEmail, newUserPassword, newUserRole, newUserPlan)
     },
     onSuccess: async () => {
       setNewUserEmail('')
+      setNewUserPassword('')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
   })
@@ -893,7 +898,7 @@ export default function AdminPage() {
     prods.slice(0, 3).forEach((prod) => {
       logs.push({
         id: `prod-${prod.id}`,
-        user: 'Catalog Admin',
+        user: 'Admin',
         event: `Edited category item "${prod.name}"`,
         time: formatDate(prod.created_at),
         type: 'success',
@@ -2161,11 +2166,7 @@ export default function AdminPage() {
                               value={item.role}
                               onChange={(e) => updateUserRoleMutation.mutate({ userId: item.id, role: e.target.value })}
                             >
-                              <option value="superadmin">Super Admin</option>
-                              <option value="catalog">Catalog Admin</option>
-                              <option value="operations">Operations Admin</option>
-                              <option value="content">Content Admin</option>
-                              <option value="analyst">Analyst</option>
+                              <option value="admin">Admin</option>
                               <option value="user">User (No Admin Access)</option>
                             </select>
                           </td>
@@ -2226,18 +2227,24 @@ export default function AdminPage() {
                     </div>
 
                     <div>
+                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Password</label>
+                      <Input
+                        type="password"
+                        placeholder="Minimum 8 characters"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
                       <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Access Level</label>
                       <select
                         className="w-full rounded-2xl border border-rose-200/80 bg-white px-4 py-2.5 text-xs text-pearl focus:outline-none focus:ring-1 focus:ring-rose-300"
                         value={newUserRole}
                         onChange={(e) => setNewUserRole(e.target.value as any)}
                       >
-                        <option value="superadmin">Super Admin (All modules)</option>
-                        <option value="catalog">Catalog Admin (Products & Recommendations)</option>
-                        <option value="operations">Operations Admin (Products & Scans)</option>
-                        <option value="content">Content Admin (Products & Reasons)</option>
-                        <option value="analyst">Analyst (Scans, Read-only)</option>
-                        <option value="user">Standard User (Admin Access Denied)</option>
+                        <option value="admin">Admin</option>
+                        <option value="user">Standard User</option>
                       </select>
                     </div>
 
@@ -2263,7 +2270,7 @@ export default function AdminPage() {
                       onClick={() => createUserRoleMutation.mutate()}
                       disabled={createUserRoleMutation.isPending}
                     >
-                      {createUserRoleMutation.isPending ? 'Assigning...' : 'Assign User Role'}
+                      {createUserRoleMutation.isPending ? 'Creating...' : 'Create User'}
                     </Button>
                   </div>
                 </Card>
@@ -2278,10 +2285,8 @@ export default function AdminPage() {
                   <div className="mt-5 space-y-3 text-xs text-rose-950">
                     {[
                       { role: 'Super Admin', scope: 'Full access across all dashboard segments and simulator tools.' },
-                      { role: 'Catalog Admin', scope: 'Add products to catalog, pricing details, and match recommendations.' },
-                      { role: 'Operations Admin', scope: 'View catalog lists, check scan histories, and use simulators.' },
-                      { role: 'Content Admin', scope: 'Edit product descriptions and tweak match reasons.' },
-                      { role: 'Analyst', scope: 'View metric graphs in read-only mode, scan logs, and test connections.' },
+                      { role: 'Admin', scope: 'Full access to manage users, catalog, scans, recommendations and settings.' },
+                      { role: 'User', scope: 'Standard access without admin panels. Can run scans and use subscription benefits.' },
                     ].map((item) => (
                       <div key={item.role} className="rounded-2xl border border-rose-50 bg-rose-50/20 px-3 py-2.5">
                         <p className="font-semibold flex items-center gap-1.5">

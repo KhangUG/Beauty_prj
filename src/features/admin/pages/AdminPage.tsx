@@ -235,6 +235,7 @@ export default function AdminPage() {
   // User Manager Form
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserRole, setNewUserRole] = useState<AdminRole | 'user'>('analyst')
+  const [newUserPlan, setNewUserPlan] = useState<'free' | 'premium' | 'pro'>('free')
 
   // Scan Simulator State
   const [targetUserId, setTargetUserId] = useState('')
@@ -713,12 +714,22 @@ export default function AdminPage() {
     },
   })
 
+  const updateUserSubscriptionTierMutation = useMutation({
+    mutationFn: async ({ userId, subscriptionTier }: { userId: string; subscriptionTier: string }) => {
+      return databaseService.updateUserSubscriptionTier(userId, subscriptionTier)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      await useAuthStore.getState().initialize()
+    },
+  })
+
   const createUserRoleMutation = useMutation({
     mutationFn: async () => {
       if (!newUserEmail || !newUserEmail.includes('@')) {
         throw new Error('Please enter a valid email address.')
       }
-      return databaseService.createUserWithRole(newUserEmail, newUserRole)
+      return databaseService.createUserWithRole(newUserEmail, newUserRole, newUserPlan)
     },
     onSuccess: async () => {
       setNewUserEmail('')
@@ -2130,6 +2141,7 @@ export default function AdminPage() {
                       <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
                         <th className="pb-3 pr-2">Email</th>
                         <th className="pb-3 px-2">Assigned Role</th>
+                        <th className="pb-3 px-2">Subscription</th>
                         <th className="pb-3 px-2">Created At</th>
                         <th className="pb-3 pl-2 text-right">Actions</th>
                       </tr>
@@ -2155,6 +2167,17 @@ export default function AdminPage() {
                               <option value="content">Content Admin</option>
                               <option value="analyst">Analyst</option>
                               <option value="user">User (No Admin Access)</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-2">
+                            <select
+                              className="rounded border border-rose-100 bg-white px-2 py-1 focus:outline-none text-[11px]"
+                              value={(item as any).subscription_tier ?? 'free'}
+                              onChange={(e) => updateUserSubscriptionTierMutation.mutate({ userId: item.id, subscriptionTier: e.target.value })}
+                            >
+                              <option value="free">Free</option>
+                              <option value="premium">Premium</option>
+                              <option value="pro">Pro</option>
                             </select>
                           </td>
                           <td className="py-3 px-2 text-mist">
@@ -2215,6 +2238,19 @@ export default function AdminPage() {
                         <option value="content">Content Admin (Products & Reasons)</option>
                         <option value="analyst">Analyst (Scans, Read-only)</option>
                         <option value="user">Standard User (Admin Access Denied)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Subscription Plan</label>
+                      <select
+                        className="w-full rounded-2xl border border-rose-200/80 bg-white px-4 py-2.5 text-xs text-pearl focus:outline-none focus:ring-1 focus:ring-rose-300"
+                        value={newUserPlan}
+                        onChange={(e) => setNewUserPlan(e.target.value as 'free' | 'premium' | 'pro')}
+                      >
+                        <option value="free">Free</option>
+                        <option value="premium">Premium</option>
+                        <option value="pro">Pro</option>
                       </select>
                     </div>
 

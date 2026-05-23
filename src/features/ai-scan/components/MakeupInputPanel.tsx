@@ -25,7 +25,8 @@ type MakeupInputPanelProps = {
   imageSource: string
   effects: MakeupEffect[]
   isProcessing: boolean
-  apiConfigured: boolean
+  processDisabled?: boolean
+  processDisabledReason?: string
   onImageChange: (value: string) => void
   onEffectsChange: (effects: MakeupEffect[]) => void
   onProcess: () => void
@@ -50,7 +51,8 @@ export function MakeupInputPanel({
   imageSource,
   effects,
   isProcessing,
-  apiConfigured,
+  processDisabled,
+  processDisabledReason,
   onImageChange,
   onEffectsChange,
   onProcess,
@@ -326,15 +328,27 @@ export function MakeupInputPanel({
       </div>
 
       <div className="shrink-0 border-t border-rose-100 bg-white p-4">
-        <Button 
-          type="button" 
-          className="w-full" 
-          onClick={onProcess} 
-          disabled={!imageSource || !isValidated || isProcessing || validationState === 'checking'}
+        <Button
+          type="button"
+          className="w-full"
+          onClick={onProcess}
+          disabled={
+            !imageSource || !isValidated || isProcessing || validationState === 'checking' || processDisabled
+          }
         >
-          {validationState === 'checking' ? 'Đang kiểm tra...' : isProcessing ? 'Processing...' : 'Start Processing'}
+          {validationState === 'checking'
+            ? 'Đang kiểm tra...'
+            : isProcessing
+            ? 'Processing...'
+            : processDisabled
+            ? 'Limit reached'
+            : 'Start Processing'}
         </Button>
-        <p className="mt-2 text-center text-[10px] text-mist">1 free trial(s) left — configure API for production</p>
+        {processDisabledReason ? (
+          <p className="mt-3 text-center text-sm text-rose-600">{processDisabledReason}</p>
+        ) : (
+          <p className="mt-2 text-center text-[10px] text-mist">1 free trial(s) left — configure API for production</p>
+        )}
         <button
           type="button"
           className="mt-1 w-full text-center text-xs text-cyan-700 underline"

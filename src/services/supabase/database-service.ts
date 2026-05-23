@@ -1,5 +1,6 @@
 import { supabase, type Json } from '@/services/supabase/client'
 import { type ScanResult, type OrderRecord } from '@/shared/lib/types'
+import { getSubscriptionTier, setSubscriptionTier } from '@/shared/lib/subscription'
 
 type SaveRecommendationInput = {
   productId: string
@@ -205,6 +206,18 @@ export const databaseService = {
     return data ?? []
   },
 
+  async getScanCountThisMonth(userId: string) {
+    const startOfMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString()
+    const { data, error } = await supabase
+      .from('scans')
+      .select('id')
+      .eq('user_id', userId)
+      .gte('created_at', startOfMonth)
+
+    if (error) throw error
+    return (data ?? []).length
+  },
+
   async getAdminScans() {
     const { data, error } = await supabase.from('scans').select('*').order('created_at', { ascending: false })
     if (error) throw error
@@ -292,7 +305,11 @@ export const databaseService = {
     const stored = localStorage.getItem('lumina_user_roles')
     if (stored) {
       try {
-        return JSON.parse(stored) as Array<{ id: string; email: string; role: string; created_at: string }>
+        const users = JSON.parse(stored) as Array<{ id: string; email: string; role: string; created_at: string }>
+        return users.map((user) => ({
+          ...user,
+          subscription_tier: getSubscriptionTier(user.id) ?? 'free',
+        }))
       } catch {
         // ignore
       }
@@ -306,26 +323,34 @@ export const databaseService = {
       { id: 'u6', email: 'guest-customer@gmail.com', role: 'user', created_at: new Date().toISOString() },
     ]
     localStorage.setItem('lumina_user_roles', JSON.stringify(defaultUsers))
-    return defaultUsers
+    defaultUsers.forEach((user) => setSubscriptionTier(user.id, 'free'))
+    return defaultUsers.map((user) => ({ ...user, subscription_tier: 'free' }))
   },
 
   updateUserRole(userId: string, role: string) {
     const users = this.getUsersWithRoles()
-    const updated = users.map((u: any) => u.id === userId ? { ...u, role } : u)
+    const updated = users.map((u: any) => (u.id === userId ? { ...u, role } : u))
     localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
     return updated
   },
 
-  createUserWithRole(email: string, role: string) {
+  updateUserSubscriptionTier(userId: string, subscriptionTier: string) {
+    setSubscriptionTier(userId, subscriptionTier)
+    return this.getUsersWithRoles()
+  },
+
+  createUserWithRole(email: string, role: string, subscriptionTier = 'free') {
     const users = this.getUsersWithRoles()
     const newUser = {
       id: 'u-' + Math.random().toString(36).substr(2, 9),
       email,
       role,
       created_at: new Date().toISOString(),
+      subscription_tier: subscriptionTier,
     }
     const updated = [...users, newUser]
     localStorage.setItem('lumina_user_roles', JSON.stringify(updated))
+    setSubscriptionTier(newUser.id, subscriptionTier)
     return newUser
   },
 

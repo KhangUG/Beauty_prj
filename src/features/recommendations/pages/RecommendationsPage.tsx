@@ -22,8 +22,8 @@ export default function RecommendationsPage() {
 
   const plan = subscriptionTier?.toLowerCase() || 'free'
   const quotaByPlan: Record<string, number> = {
-    free: 2,
-    premium: 10,
+    free: 5,
+    premium: 500,
     pro: 25,
   }
   const maxScans = quotaByPlan[plan] ?? quotaByPlan.free

@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ChevronRight, ExternalLink, Upload } from 'lucide-react'
+import { ChevronRight, ExternalLink, Upload, AlertCircle, Loader } from 'lucide-react'
 import { CategoryEffectEditor } from '@/features/ai-scan/components/CategoryEffectEditor'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
@@ -17,6 +17,7 @@ import {
 } from '@/features/ai-scan/lib/makeup-defaults'
 import { prepareEffectForEnable } from '@/features/ai-scan/lib/makeup-patterns'
 import { cn } from '@/shared/lib/cn'
+import { useFaceValidation } from '@/features/ai-scan/hooks/useFaceValidation'
 
 type InputMode = 'url' | 'upload' | 'sample'
 
@@ -58,6 +59,10 @@ export function MakeupInputPanel({
   const [urlInput, setUrlInput] = useState('')
   const [showAllSamples, setShowAllSamples] = useState(false)
   const [openCategory, setOpenCategory] = useState<string | null>(null)
+  const [isValidated, setIsValidated] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
+  
+  const { validationState, validationError, validateAndSetImage, resetValidation } = useFaceValidation()
 
   const enabledEffects = useMemo(
     () => effects.filter((effect) => effect.enabled === true),
@@ -72,11 +77,60 @@ export function MakeupInputPanel({
     )
   }
 
+  // Validate image and update if valid
+  const handleImageSelection = async (imageUrl: string, isSample = false) => {
+    setIsValidated(false)
+    resetValidation()
+    
+    // Allow sample images to bypass face detection validation
+    if (isSample) {
+      setIsValidated(true)
+      onImageChange(imageUrl)
+      return
+    }
+    
+    const isValid = await validateAndSetImage(imageUrl)
+    if (isValid) {
+      setIsValidated(true)
+      onImageChange(imageUrl)
+    }
+  }
+
+  const handleRetryValidation = async () => {
+    if (!imageSource) return
+    setIsRetrying(true)
+    try {
+      const isValid = await validateAndSetImage(imageSource)
+      if (isValid) {
+        setIsValidated(true)
+      }
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
+  const clearSelectedImage = () => {
+    if (imageSource.startsWith('blob:')) {
+      URL.revokeObjectURL(imageSource)
+    }
+    setIsValidated(false)
+    resetValidation()
+    onImageChange('')
+  }
+
+  const handleModeChange = (nextMode: InputMode) => {
+    if (nextMode === mode) return
+    clearSelectedImage()
+    setUrlInput('')
+    setMode(nextMode)
+  }
+
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    onImageChange(URL.createObjectURL(file))
-    setMode('upload')
+    const objectUrl = URL.createObjectURL(file)
+    handleImageSelection(objectUrl)
+    event.target.value = ''
   }
 
   const toggleCategory = (category: string) => {
@@ -124,7 +178,7 @@ export function MakeupInputPanel({
               }
             />
 
-            <PlaygroundTabs tabs={['url', 'upload', 'sample']} value={mode} onChange={setMode} />
+            <PlaygroundTabs tabs={['url', 'upload', 'sample']} value={mode} onChange={handleModeChange} />
 
             {mode === 'url' ? (
               <div className="space-y-2">
@@ -138,9 +192,10 @@ export function MakeupInputPanel({
                   size="sm"
                   variant="ghost"
                   className="w-full"
-                  onClick={() => urlInput.trim() && onImageChange(urlInput.trim())}
+                  onClick={() => urlInput.trim() && handleImageSelection(urlInput.trim(), false)}
+                  disabled={validationState === 'checking'}
                 >
-                  Apply URL
+                  {validationState === 'checking' ? 'Checking...' : 'Apply URL'}
                 </Button>
               </div>
             ) : null}
@@ -149,7 +204,7 @@ export function MakeupInputPanel({
               <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-rose-200 bg-rose-50/50 px-4 py-10 text-sm text-mist transition hover:border-cyan/40 hover:bg-rose-50">
                 <Upload className="h-5 w-5 text-rose-500" />
                 Drop or click to upload
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} disabled={validationState === 'checking'} />
               </label>
             ) : null}
 
@@ -162,9 +217,10 @@ export function MakeupInputPanel({
                       <button
                         key={sample.id}
                         type="button"
-                        onClick={() => onImageChange(sample.fullUrl)}
+                        onClick={() => handleImageSelection(sample.fullUrl, true)}
+                        disabled={validationState === 'checking'}
                         className={cn(
-                          'relative overflow-hidden rounded-lg bg-white p-0.5 transition-all',
+                          'relative overflow-hidden rounded-lg bg-white p-0.5 transition-all disabled:opacity-50',
                           selected ? 'ring-[3px] ring-cyan-500' : 'hover:ring-2 hover:ring-cyan/30',
                         )}
                       >
@@ -187,6 +243,33 @@ export function MakeupInputPanel({
                 </div>
               </div>
             ) : null}
+
+            {validationState === 'checking' && (
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 py-3 text-sm text-blue-700">
+                <Loader className="h-4 w-4 animate-spin" />
+                Đang kiểm tra ảnh...
+              </div>
+            )}
+
+            {validationError && (
+              <div className="flex items-start gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">Không thể sử dụng ảnh này</p>
+                  <p className="mt-1 text-red-600">{validationError}</p>
+                  {validationError.includes('Unable to load face detection models') && (
+                    <button
+                      type="button"
+                      onClick={handleRetryValidation}
+                      disabled={isRetrying || !imageSource}
+                      className="mt-2 text-xs font-semibold text-cyan-700 underline hover:text-cyan-800 disabled:opacity-50"
+                    >
+                      {isRetrying ? 'Retrying...' : 'Retry'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {imageSource && mode !== 'sample' ? (
               <div className="overflow-hidden rounded-lg border border-rose-100">
@@ -243,8 +326,13 @@ export function MakeupInputPanel({
       </div>
 
       <div className="shrink-0 border-t border-rose-100 bg-white p-4">
-        <Button type="button" className="w-full" onClick={onProcess} disabled={!imageSource || isProcessing}>
-          {isProcessing ? 'Processing...' : 'Start Processing'}
+        <Button 
+          type="button" 
+          className="w-full" 
+          onClick={onProcess} 
+          disabled={!imageSource || !isValidated || isProcessing || validationState === 'checking'}
+        >
+          {validationState === 'checking' ? 'Đang kiểm tra...' : isProcessing ? 'Processing...' : 'Start Processing'}
         </Button>
         <p className="mt-2 text-center text-[10px] text-mist">1 free trial(s) left — configure API for production</p>
         <button

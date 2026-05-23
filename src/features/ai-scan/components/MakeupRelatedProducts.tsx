@@ -50,7 +50,7 @@ export function MakeupRelatedProducts({ products, isLoading, activeCategories }:
             </p>
           </div>
         ) : (
-          <ScanProductGrid products={products.map(toGridProduct)} />
+          <ScanProductGrid products={products.map(toGridProduct)} pageSize={4} />
         )}
       </div>
     </div>

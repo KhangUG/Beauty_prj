@@ -7,6 +7,7 @@ const PAGE_SIZE = 6
 
 type ScanProductGridProps = {
   products: ProductRecommendation[]
+  pageSize?: number
 }
 
 function getPartnerName(url: string): string {
@@ -107,13 +108,14 @@ function CompactProductCard({ product, index }: { product: ProductRecommendation
   )
 }
 
-export function ScanProductGrid({ products }: ScanProductGridProps) {
+export function ScanProductGrid({ products, pageSize }: ScanProductGridProps) {
   const [page, setPage] = useState(0)
   const [direction, setDirection] = useState(1)
+  const effectivePageSize = pageSize ?? PAGE_SIZE
 
-  const totalPages = Math.ceil(products.length / PAGE_SIZE)
-  const start = page * PAGE_SIZE
-  const pageProducts = products.slice(start, start + PAGE_SIZE)
+  const totalPages = Math.ceil(products.length / effectivePageSize)
+  const start = page * effectivePageSize
+  const pageProducts = products.slice(start, start + effectivePageSize)
 
   const goTo = (next: number) => {
     setDirection(next > page ? 1 : -1)
@@ -140,10 +142,10 @@ export function ScanProductGrid({ products }: ScanProductGridProps) {
             animate="center"
             exit="exit"
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 grid-rows-2"
+            className={`grid grid-cols-2 gap-3 ${effectivePageSize <= 4 ? 'sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2' : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3'}`}
           >
             {pageProducts.map((product, index) => (
-              <div key={product.id} className={`${index === 0 ? 'lg:col-span-2' : ''}`}>
+              <div key={product.id}>
                 <CompactProductCard product={product} index={index} />
               </div>
             ))}

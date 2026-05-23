@@ -20,7 +20,6 @@ export function MakeupResultPanel({
   errorMessage,
 }: MakeupResultPanelProps) {
   const isProcessing = status === 'running' || status === 'queued' || status === 'processing'
-  const preview = resultUrl ?? imageSource
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] border border-rose-100/60 bg-white/90 shadow-sm">
@@ -54,8 +53,8 @@ export function MakeupResultPanel({
             </div>
           ) : errorMessage ? (
             <div className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div>
-          ) : preview ? (
-            <img src={preview} alt="Makeup result" className="w-full rounded-2xl object-contain" />
+          ) : resultUrl ? (
+            <img src={resultUrl} alt="Processed makeup result" className="w-full rounded-2xl object-contain" />
           ) : (
             <p className="text-sm text-mist">Select an image and start processing.</p>
           )}

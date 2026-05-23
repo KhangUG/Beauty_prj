@@ -6,7 +6,7 @@ import { useToast } from '@/shared/hooks/useToast'
 import { MakeupInputPanel } from '@/features/ai-scan/components/MakeupInputPanel'
 import { MakeupResultPanel } from '@/features/ai-scan/components/MakeupResultPanel'
 import { MakeupRelatedProducts } from '@/features/ai-scan/components/MakeupRelatedProducts'
-import { DEFAULT_MAKEUP_EFFECTS, SAMPLE_SELFIES } from '@/features/ai-scan/lib/makeup-defaults'
+import { DEFAULT_MAKEUP_EFFECTS } from '@/features/ai-scan/lib/makeup-defaults'
 import { matchProductsToEffects } from '@/features/ai-scan/lib/makeup-product-matcher'
 import { useMakeupCatalog } from '@/features/ai-scan/hooks/useMakeupCatalog'
 import { isMakeupApiConfigured, runMakeupVirtualTryOn } from '@/features/ai-scan/services/makeup-vto-service'
@@ -28,7 +28,7 @@ export default function AIScanPage() {
   const toast = useToast()
   const apiConfigured = isMakeupApiConfigured()
 
-  const [imageSource, setImageSource] = useState(SAMPLE_SELFIES[0].fullUrl)
+  const [imageSource, setImageSource] = useState('')
   const [effects, setEffects] = useState<MakeupEffect[]>(cloneDefaultEffects)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)

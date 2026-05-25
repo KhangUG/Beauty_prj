@@ -10,6 +10,9 @@ export type MakeupPalette = {
   glowIntensity?: number
   thickness?: number
   smoothness?: number
+  shimmerDensity?: number
+  shimmerIntensity?: number
+  shimmerSize?: number
 }
 
 export type MakeupEffect = {

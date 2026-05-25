@@ -6,7 +6,7 @@ import { useToast } from '@/shared/hooks/useToast'
 import { MakeupInputPanel } from '@/features/ai-scan/components/MakeupInputPanel'
 import { MakeupResultPanel } from '@/features/ai-scan/components/MakeupResultPanel'
 import { MakeupRelatedProducts } from '@/features/ai-scan/components/MakeupRelatedProducts'
-import { DEFAULT_MAKEUP_EFFECTS } from '@/features/ai-scan/lib/makeup-defaults'
+import { DEFAULT_MAKEUP_EFFECTS, buildApiEffects } from '@/features/ai-scan/lib/makeup-defaults'
 import { matchProductsToEffects } from '@/features/ai-scan/lib/makeup-product-matcher'
 import { useMakeupCatalog } from '@/features/ai-scan/hooks/useMakeupCatalog'
 import { useCategories } from '@/features/ai-scan/hooks/useCategories'
@@ -86,6 +86,12 @@ export default function AIScanPage() {
 
     if (isQuotaExceeded) {
       toast.error('Bạn đã dùng hết lượt scan trong tháng này. Vui lòng nâng cấp hoặc thử lại tháng sau.')
+      return
+    }
+
+    const apiEffects = buildApiEffects(effects)
+    if (apiEffects.length === 0) {
+      toast.error('Vui lòng bật ít nhất một hiệu ứng trang điểm để thực hiện xem thử.')
       return
     }
 

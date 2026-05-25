@@ -162,11 +162,33 @@ const DEFAULT_PALETTE: MakeupPalette = {
   colorIntensity: 50,
 }
 
-export function ensurePaletteCount(palettes: MakeupPalette[] | undefined, count: number): MakeupPalette[] {
+export function ensurePaletteCount(
+  palettes: MakeupPalette[] | undefined,
+  count: number,
+  category?: string,
+): MakeupPalette[] {
   const next = [...(palettes ?? [])]
   while (next.length < count) {
+    const extra: Partial<MakeupPalette> = {}
+    if (category === 'highlighter') {
+      extra.glowIntensity = 50
+      extra.shimmerDensity = 50
+      extra.shimmerIntensity = 50
+      extra.shimmerSize = 50
+    } else if (category === 'lip_liner') {
+      extra.smoothness = 50
+      extra.thickness = 50
+    } else if (category === 'foundation') {
+      extra.coverageIntensity = 50
+      extra.glowIntensity = 0
+    } else if (category === 'concealer') {
+      extra.colorUnderEyeIntensity = 50
+      extra.coverageLevel = 50
+    }
+
     next.push({
       ...DEFAULT_PALETTE,
+      ...extra,
       color: count > 1 && next.length === 1 ? '#F2A53E' : DEFAULT_PALETTE.color,
     })
   }
@@ -181,14 +203,14 @@ export function applyPatternSelection(effect: MakeupEffect, pattern: PatternCata
     return {
       ...effect,
       shape: { name: pattern.label },
-      palettes: ensurePaletteCount(effect.palettes, 1),
+      palettes: ensurePaletteCount(effect.palettes, 1, effect.category),
     }
   }
 
   return {
     ...effect,
     pattern: { ...effect.pattern, name: pattern.label },
-    palettes: ensurePaletteCount(effect.palettes, colorNum),
+    palettes: ensurePaletteCount(effect.palettes, colorNum, effect.category),
   }
 }
 
@@ -244,5 +266,5 @@ export function syncEffectPaletteCount(
   const count = getPatternColorCount(label, item)
   const current = effect.palettes?.length ?? 0
   if (current === count) return effect
-  return { ...effect, palettes: ensurePaletteCount(effect.palettes, count) }
+  return { ...effect, palettes: ensurePaletteCount(effect.palettes, count, effect.category) }
 }

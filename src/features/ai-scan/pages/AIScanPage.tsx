@@ -9,6 +9,7 @@ import { MakeupRelatedProducts } from '@/features/ai-scan/components/MakeupRelat
 import { DEFAULT_MAKEUP_EFFECTS } from '@/features/ai-scan/lib/makeup-defaults'
 import { matchProductsToEffects } from '@/features/ai-scan/lib/makeup-product-matcher'
 import { useMakeupCatalog } from '@/features/ai-scan/hooks/useMakeupCatalog'
+import { useCategories } from '@/features/ai-scan/hooks/useCategories'
 import { runMakeupVirtualTryOn } from '@/features/ai-scan/services/makeup-vto-service'
 import { persistScan } from '@/features/ai-scan/services/scan-persistence-service'
 import { mockScanResult } from '@/shared/data/mock-scan'
@@ -44,6 +45,7 @@ export default function AIScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const catalogQuery = useMakeupCatalog()
+  const categoriesQuery = useCategories()
 
   const activeCategories = useMemo(
     () => effects.filter((effect) => effect.enabled === true).map((effect) => effect.category),
@@ -148,6 +150,7 @@ export default function AIScanPage() {
           <MakeupInputPanel
             imageSource={imageSource}
             effects={effects}
+            categories={categoriesQuery.data ?? []}
             isProcessing={processMutation.isPending}
             processDisabled={isQuotaExceeded}
             processDisabledReason={

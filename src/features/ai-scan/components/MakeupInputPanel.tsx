@@ -24,6 +24,7 @@ type InputMode = 'url' | 'upload' | 'sample'
 type MakeupInputPanelProps = {
   imageSource: string
   effects: MakeupEffect[]
+  categories?: Array<{ id: string; name: string; api_category_key: string }>
   isProcessing: boolean
   processDisabled?: boolean
   processDisabledReason?: string
@@ -50,6 +51,7 @@ function isSampleSelected(imageSource: string, fullUrl: string) {
 export function MakeupInputPanel({
   imageSource,
   effects,
+  categories,
   isProcessing,
   processDisabled,
   processDisabledReason,
@@ -288,15 +290,15 @@ export function MakeupInputPanel({
             <div className="grid gap-2">
               <label className="mb-1 block text-sm font-semibold text-rose-950">Category</label>
               <div className="grid grid-cols-2 gap-3">
-                {effects.map((effect) => {
-                  const meta = MAKEUP_CATEGORY_META[effect.category]
-                  const isOn = effect.enabled === true
+                {(categories ?? []).map((category) => {
+                  const meta = MAKEUP_CATEGORY_META[category.api_category_key]
+                  const isOn = effects.find((e) => e.category === category.api_category_key)?.enabled === true
                   return (
                     <PlaygroundCheckbox
-                      key={effect.category}
+                      key={category.api_category_key}
                       checked={isOn}
-                      label={meta?.label ?? effect.category}
-                      onChange={() => toggleCategory(effect.category)}
+                      label={meta?.label ?? category.name}
+                      onChange={() => toggleCategory(category.api_category_key)}
                     />
                   )
                 })}

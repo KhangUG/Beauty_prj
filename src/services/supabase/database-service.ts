@@ -187,6 +187,12 @@ export const databaseService = {
     return (data ?? []) as AdminProductConfigRecord[]
   },
 
+  async getCategories() {
+    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as AdminCategoryRecord[]
+  },
+
   async createProductConfig(input: Omit<AdminProductConfigRecord, 'id' | 'created_at'>) {
     const { data, error } = await supabase.from('product_configs').insert(input).select('*').single()
     if (error) throw error

@@ -28,6 +28,8 @@ import {
   ChevronRight,
   ExternalLink,
   X,
+  CreditCard,
+  BadgeCheck,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -59,6 +61,8 @@ const sidebarSections: Array<{
     { id: 'product-configs', label: 'AI Configs', description: 'Manage AI product configurations', icon: Sparkles },
     { id: 'scans', label: 'Scans', description: 'View scan history and simulation', icon: Camera },
     { id: 'access', label: 'Access', description: 'Roles and permissions', icon: Users },
+    { id: 'plans', label: 'Plans', description: 'Manage subscription plans', icon: CreditCard },
+    { id: 'subscriptions', label: 'Subscriptions', description: 'Manage user subscriptions', icon: BadgeCheck },
     { id: 'settings', label: 'Settings', description: 'Platform and environment', icon: Wrench },
     { id: 'revenue', label: 'Revenue', description: 'Orders and sales', icon: DollarSign },
   ]
@@ -126,6 +130,19 @@ const emptyProductConfigForm: ProductConfigFormState = {
   colorIntensity: 50,
   patternName: '',
   extraParams: '{}',
+}
+
+const EMPTY_PLAN = {
+  name: '',
+  slug: '',
+  price: 0,
+  billing_interval: 'month' as const,
+  scan_limit: 10,
+  history_days: 30,
+  description: '',
+  features: [] as string[],
+  badge: null as string | null,
+  is_active: true,
 }
 
 // const emptyScanForm: ScanFormState = {
@@ -200,6 +217,99 @@ function AdminSectionTitle({
   )
 }
 
+function SubForm({ initial, plans, users, onSubmit, isPending }: {
+  initial: any | null
+  plans: any[]
+  users: any[]
+  onSubmit: (values: any) => Promise<void>
+  isPending: boolean
+}) {
+  const [form, setForm] = useState({
+    user_id:    initial?.user_id ?? '',
+    plan_id:    initial?.plan_id ?? '',
+    status:     initial?.status ?? 'active',
+    started_at: initial?.started_at
+      ? initial.started_at.slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+    expires_at: initial?.expires_at ? initial.expires_at.slice(0, 10) : '',
+  })
+
+  const inputCls = "w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+
+  return (
+    <div className="space-y-3">
+      {/* User — chỉ hiện khi tạo mới */}
+      {!initial && (
+        <div>
+          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">User</label>
+          <select className={inputCls} value={form.user_id}
+            onChange={(e) => setForm(f => ({ ...f, user_id: e.target.value }))}>
+            <option value="">Select user...</option>
+            {users.map((u: any) => (
+              <option key={u.id} value={u.id}>{u.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Plan */}
+      <div>
+        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Plan</label>
+        <select className={inputCls} value={form.plan_id}
+          onChange={(e) => setForm(f => ({ ...f, plan_id: e.target.value }))}>
+          <option value="">Select plan...</option>
+          {plans.map((p: any) => (
+            <option key={p.id} value={p.id}>
+              {p.name} — ${Number(p.price).toFixed(2)}/{p.billing_interval}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Status */}
+      <div>
+        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Status</label>
+        <select className={inputCls} value={form.status}
+          onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="expired">Expired</option>
+        </select>
+      </div>
+
+      {/* Started At */}
+      <div>
+        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Started At</label>
+        <input type="date" className={inputCls} value={form.started_at}
+          onChange={(e) => setForm(f => ({ ...f, started_at: e.target.value }))} />
+      </div>
+
+      {/* Expires At */}
+      <div>
+        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">
+          Expires At <span className="text-mist font-normal normal-case">(để trống = không hết hạn)</span>
+        </label>
+        <input type="date" className={inputCls} value={form.expires_at}
+          onChange={(e) => setForm(f => ({ ...f, expires_at: e.target.value }))} />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button
+          disabled={isPending || !form.user_id || !form.plan_id}
+          onClick={() => onSubmit({
+            ...form,
+            started_at: new Date(form.started_at).toISOString(),
+            expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+          })}
+        >
+          {isPending ? 'Saving...' : initial ? 'Save Changes' : 'Create'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const { adminRole, signOut, user: currentAuthUser } = useAuth()
   const queryClient = useQueryClient()
@@ -246,6 +356,12 @@ export default function AdminPage() {
   const [pingTime, setPingTime] = useState<number | null>(null)
   const [pingStatus, setPingStatus] = useState<'idle' | 'pinging' | 'success' | 'failed'>('idle')
 
+  const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [planForm, setPlanForm] = useState(EMPTY_PLAN)
+  const [selectedPlan, setSelectedPlan] = useState<any>(null)
+
+
+
   const testPing = async () => {
     setPingStatus('pinging')
     const start = performance.now()
@@ -287,13 +403,25 @@ export default function AdminPage() {
 
   const usersQuery = useQuery({
     queryKey: ['admin', 'profiles'],
-    queryFn: () => databaseService.getProfiles(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('*')
+      console.log('profiles data:', data)
+      console.log('profiles error:', error)
+      return data ?? []
+    },
   })
 
   const ordersQuery = useQuery({
     queryKey: ['admin', 'orders'],
     queryFn: async () => databaseService.getOrders(),
   })
+
+  const plansQuery = useQuery({
+    queryKey: ['admin', 'plans'],
+    queryFn: () => databaseService.getPlans(),
+  })
+
+  
 
   // Lookups & Filters
   const tabs = useMemo(
@@ -591,6 +719,22 @@ export default function AdminPage() {
     },
   })
 
+  const createPlanMutation = useMutation({
+    mutationFn: (plan: any) => databaseService.createPlan(plan),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] }),
+  })
+
+  const updatePlanMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: any }) =>
+      databaseService.updatePlan(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] }),
+  })
+
+  const deletePlanMutation = useMutation({
+    mutationFn: (id: string) => databaseService.deletePlan(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] }),
+  })
+
 
   // User Manager Mutations
   const updateUserRoleMutation = useMutation({
@@ -747,6 +891,52 @@ export default function AdminPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
     },
   })
+
+  const subscriptionsQuery = useQuery({
+    queryKey: ['admin', 'subscriptions'],
+    queryFn: () => databaseService.getSubscriptions(),
+  })
+
+  const createSubMutation = useMutation({
+    mutationFn: (input: any) => databaseService.createSubscription(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] }),
+  })
+
+  const updateSubMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: any }) =>
+      databaseService.updateSubscription(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] }),
+  })
+
+  const cancelSubMutation = useMutation({
+    mutationFn: (id: string) => databaseService.cancelSubscription(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'subscriptions'] }),
+  })
+
+  const [subSearch, setSubSearch] = useState('')
+  const [subStatusFilter, setSubStatusFilter] = useState('all')
+  const [subPage, setSubPage] = useState(1)
+  const [subModalOpen, setSubModalOpen] = useState(false)
+  const [selectedSub, setSelectedSub] = useState<any>(null)
+  const SUB_PAGE_SIZE = 10
+
+  const filteredSubs = useMemo(() => {
+    return (subscriptionsQuery.data ?? []).filter((s: any) => {
+      const email = s.user_id ? (userLookup.get(s.user_id)?.email ?? '') : ''
+      const matchSearch = subSearch === ''
+        || s.id.toLowerCase().includes(subSearch.toLowerCase())
+        || s.user_id?.toLowerCase().includes(subSearch.toLowerCase())
+        || email.toLowerCase().includes(subSearch.toLowerCase())
+      const matchStatus = subStatusFilter === 'all' || s.status === subStatusFilter
+      return matchSearch && matchStatus
+    })
+  }, [subscriptionsQuery.data, subSearch, subStatusFilter, userLookup])
+
+  const totalSubPages = Math.max(1, Math.ceil(filteredSubs.length / SUB_PAGE_SIZE))
+  const paginatedSubs = filteredSubs.slice(
+    (subPage - 1) * SUB_PAGE_SIZE,
+    subPage * SUB_PAGE_SIZE,
+  )
 
   // Simulated events for activity log
   const systemActivityLog = useMemo(() => {
@@ -1815,8 +2005,6 @@ export default function AdminPage() {
             </div>
           )}
 
-          
-
           {/* ACCESS CONTROL MANAGER */}
           {activeSection === 'access' ? (
             <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -2003,7 +2191,262 @@ export default function AdminPage() {
               </div>
             </div>
           ) : null}
+          {activeSection === 'plans' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <AdminSectionTitle
+                  eyebrow="Subscription Plans"
+                  title="Manage Plans"
+                  description={`${plansQuery.data?.length ?? 0} plan(s) configured.`}
+                />
+                <Button onClick={() => {
+                  setPlanForm(EMPTY_PLAN)
+                  setSelectedPlan(null)
+                  setPlanModalOpen(true)
+                }}>
+                  + Add Plan
+                </Button>
+              </div>
 
+              {/* Plans grid */}
+              {(plansQuery.data?.length ?? 0) === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-rose-200 bg-white/80 p-12 text-center text-sm text-mist">
+                  No plans yet. Click "Add Plan" to create one.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {(plansQuery.data ?? []).map((plan: any) => (
+                    <div key={plan.id} className={cn(
+                      'rounded-2xl border bg-white p-5 space-y-3 transition',
+                      plan.is_active ? 'border-rose-100' : 'border-rose-50 opacity-60',
+                    )}>
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-rose-950">{plan.name}</p>
+                          <p className="text-[11px] text-mist font-mono mt-0.5">slug: {plan.slug}</p>
+                        </div>
+                        {plan.badge && (
+                          <span className="rounded-full bg-cyan/10 px-2 py-0.5 text-[10px] font-bold text-cyan shrink-0">
+                            {plan.badge}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price */}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-rose-950">${Number(plan.price).toFixed(2)}</span>
+                        <span className="text-xs text-mist">/ {plan.billing_interval}</span>
+                      </div>
+
+                      {/* Description */}
+                      {plan.description && (
+                        <p className="text-xs text-mist leading-relaxed">{plan.description}</p>
+                      )}
+
+                      {/* Limits */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl bg-rose-50 px-3 py-2">
+                          <p className="text-mist">Scans</p>
+                          <p className="font-semibold text-rose-950">{plan.scan_limit}</p>
+                        </div>
+                        <div className="rounded-xl bg-rose-50 px-3 py-2">
+                          <p className="text-mist">History</p>
+                          <p className="font-semibold text-rose-950">{plan.history_days} days</p>
+                        </div>
+                      </div>
+
+                      {/* Features */}
+                      {(plan.features as string[]).length > 0 && (
+                        <ul className="space-y-1">
+                          {(plan.features as string[]).map((f: string, i: number) => (
+                            <li key={i} className="flex items-center gap-1.5 text-xs text-mist">
+                              <span className="h-1 w-1 rounded-full bg-rose-400 shrink-0" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-1 border-t border-rose-50">
+                        <button
+                          onClick={() => updatePlanMutation.mutate({ id: plan.id, patch: { is_active: !plan.is_active } })}
+                          disabled={updatePlanMutation.isPending}
+                          className={cn(
+                            'rounded-full px-3 py-1 text-[10px] font-bold border transition',
+                            plan.is_active
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                              : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100',
+                          )}
+                        >
+                          {plan.is_active ? 'Active' : 'Inactive'}
+                        </button>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => {
+                            setSelectedPlan(plan)
+                            setPlanForm({
+                              name: plan.name,
+                              slug: plan.slug,
+                              price: plan.price,
+                              billing_interval: plan.billing_interval,
+                              scan_limit: plan.scan_limit,
+                              history_days: plan.history_days,
+                              description: plan.description ?? '',
+                              features: plan.features ?? [],
+                              badge: plan.badge ?? null,
+                              is_active: plan.is_active,
+                            })
+                            setPlanModalOpen(true)
+                          }}>
+                            <PencilLine className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost"
+                            disabled={deletePlanMutation.isPending}
+                            onClick={() => {
+                              if (confirm(`Delete plan "${plan.name}"?`)) deletePlanMutation.mutate(plan.id)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Create / Edit modal */}
+              {planModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setPlanModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-lg overflow-y-auto max-h-[90vh] rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button
+                      onClick={() => setPlanModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    <h2 className="font-display text-xl text-rose-950">
+                      {selectedPlan ? 'Edit Plan' : 'New Plan'}
+                    </h2>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="text-xs text-mist mb-1 block">Name</label>
+                        <Input value={planForm.name}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, name: e.target.value }))} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">Slug</label>
+                        <Input placeholder="free / pro / premium"
+                          value={planForm.slug}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, slug: e.target.value }))} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">Badge</label>
+                        <Input placeholder="MOST POPULAR"
+                          value={planForm.badge ?? ''}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, badge: e.target.value || null }))} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">Price ($)</label>
+                        <Input type="number" min={0} step={0.01}
+                          value={planForm.price}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, price: parseFloat(e.target.value) || 0 }))} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">Billing</label>
+                        <select
+                          className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                          value={planForm.billing_interval}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, billing_interval: e.target.value }))}
+                        >
+                          <option value="month">Monthly</option>
+                          <option value="year">Yearly</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">Scan Limit</label>
+                        <Input type="number" min={0}
+                          value={planForm.scan_limit}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, scan_limit: parseInt(e.target.value) || 0 }))} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-mist mb-1 block">History Days</label>
+                        <Input type="number" min={0}
+                          value={planForm.history_days}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, history_days: parseInt(e.target.value) || 0 }))} />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="text-xs text-mist mb-1 block">Description</label>
+                        <textarea rows={2}
+                          className="w-full rounded-2xl border border-rose-200/80 bg-white/80 px-4 py-3 text-sm text-pearl placeholder:text-mist/70 focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25 resize-none"
+                          value={planForm.description ?? ''}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, description: e.target.value }))} />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="text-xs text-mist mb-1 block">Features</label>
+                        <textarea
+                          rows={5}
+                          className="w-full rounded-2xl border border-rose-200/80 bg-white/80 px-4 py-3 text-sm font-mono text-pearl placeholder:text-mist/70 focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25 resize-none"
+                          placeholder={"Unlimited scans\nPriority support\nAdvanced analytics"}
+                          value={(planForm.features as string[]).join('\n')}
+                          onChange={(e) => setPlanForm((f: any) => ({
+                            ...f,
+                            features: e.target.value.split('\n'), // không filter để giữ dòng trống khi gõ
+                          }))}
+                          onBlur={(e) => setPlanForm((f: any) => ({
+                            ...f,
+                            features: e.target.value.split('\n').filter(Boolean), // filter khi blur
+                          }))}
+                        />
+                      </div>
+
+                      <div className="col-span-2 flex items-center gap-2">
+                        <input type="checkbox" id="is_active" checked={planForm.is_active}
+                          onChange={(e) => setPlanForm((f: any) => ({ ...f, is_active: e.target.checked }))} />
+                        <label htmlFor="is_active" className="text-sm text-rose-950">Active (hiển thị cho người dùng)</label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="ghost" onClick={() => setPlanModalOpen(false)}>Cancel</Button>
+                      <Button
+                        disabled={createPlanMutation.isPending || updatePlanMutation.isPending}
+                        onClick={async () => {
+                          if (selectedPlan) {
+                            await updatePlanMutation.mutateAsync({ id: selectedPlan.id, patch: planForm })
+                          } else {
+                            await createPlanMutation.mutateAsync(planForm)
+                          }
+                          setPlanModalOpen(false)
+                        }}
+                      >
+                        {createPlanMutation.isPending || updatePlanMutation.isPending
+                          ? 'Saving...'
+                          : selectedPlan ? 'Save Changes' : 'Create Plan'
+                        }
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          
           {/* SETTINGS TAB */}
           {activeSection === 'settings' ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -2204,6 +2647,167 @@ export default function AdminPage() {
               </Card>
             </div>
           ) : null}
+
+          {activeSection === 'subscriptions' && (
+            <div className="space-y-4">
+              {/* Search & filter */}
+              <div className="bg-white border border-rose-100 rounded-3xl p-4 flex flex-wrap gap-3 items-center">
+                <div className="flex-1 relative min-w-[200px]">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-mist" />
+                  <input type="text"
+                    className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
+                    placeholder="Search by email, UUID or subscription ID..."
+                    value={subSearch}
+                    onChange={(e) => { setSubSearch(e.target.value); setSubPage(1) }}
+                  />
+                </div>
+                <select
+                  className="rounded-full border border-rose-100 px-3 py-2 text-sm focus:outline-none"
+                  value={subStatusFilter}
+                  onChange={(e) => { setSubStatusFilter(e.target.value); setSubPage(1) }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="expired">Expired</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <Button onClick={() => { setSelectedSub(null); setSubModalOpen(true) }}>
+                  + Add Subscription
+                </Button>
+              </div>
+
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="Subscriptions"
+                  title="User Subscriptions"
+                  description={`${filteredSubs.length} subscription(s) found.`}
+                />
+
+                <div className="mt-6 overflow-x-auto">
+                  <table className="w-full min-w-[800px] text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                        <th className="pb-3 px-3">Email</th>
+                        <th className="pb-3 px-3">Plan</th>
+                        <th className="pb-3 px-3">Status</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Started</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Expires</th>
+                        <th className="pb-3 pl-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50">
+                      {paginatedSubs.map((sub: any) => {
+                        const email = sub.user_id
+                          ? (userLookup.get(sub.user_id)?.email ?? sub.user_id.slice(0, 8) + '...')
+                          : 'Guest'
+                        const statusColors: Record<string, string> = {
+                          active:    'bg-emerald-50 text-emerald-700 border-emerald-100',
+                          cancelled: 'bg-rose-50 text-rose-600 border-rose-100',
+                          expired:   'bg-gray-50 text-gray-500 border-gray-200',
+                          pending:   'bg-amber-50 text-amber-700 border-amber-100',
+                        }
+                        return (
+                          <tr key={sub.id} className="hover:bg-rose-50/20 text-rose-950 align-middle">
+                            <td className="py-3 px-3 max-w-[180px] truncate" title={email}>{email}</td>
+                            <td className="py-3 px-3">
+                              <p className="font-medium">{sub.plan?.name ?? '—'}</p>
+                              <p className="text-[10px] text-mist font-mono">
+                                ${Number(sub.plan?.price ?? 0).toFixed(2)}/{sub.plan?.billing_interval}
+                              </p>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={cn(
+                                'rounded-lg px-2 py-0.5 text-[10px] font-bold border',
+                                statusColors[sub.status] ?? '',
+                              )}>
+                                {sub.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-mist whitespace-nowrap">
+                              {formatDate(sub.started_at)}
+                            </td>
+                            <td className="py-3 px-3 text-mist whitespace-nowrap">
+                              {sub.expires_at ? formatDate(sub.expires_at) : '—'}
+                            </td>
+                            <td className="py-3 pl-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="ghost"
+                                  onClick={() => { setSelectedSub(sub); setSubModalOpen(true) }}>
+                                  Edit
+                                </Button>
+                                {sub.status === 'active' && (
+                                  <Button size="sm" variant="ghost"
+                                    disabled={cancelSubMutation.isPending}
+                                    onClick={() => {
+                                      if (confirm('Cancel this subscription?')) cancelSubMutation.mutate(sub.id)
+                                    }}>
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+
+                  {paginatedSubs.length === 0 && (
+                    <div className="text-center py-12 text-mist text-sm">No subscriptions found.</div>
+                  )}
+                </div>
+
+                {totalSubPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
+                    <Button variant="ghost" size="sm" disabled={subPage === 1}
+                      onClick={() => setSubPage(p => Math.max(1, p - 1))}>
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <span className="text-xs font-semibold text-pearl">
+                      Page {subPage} of {totalSubPages}
+                    </span>
+                    <Button variant="ghost" size="sm" disabled={subPage === totalSubPages}
+                      onClick={() => setSubPage(p => Math.min(totalSubPages, p + 1))}>
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
+              {/* Modal */}
+              {subModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setSubModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-md rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button onClick={() => setSubModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition">
+                      <X className="h-4 w-4" />
+                    </button>
+                    <h2 className="font-display text-xl text-rose-950">
+                      {selectedSub ? 'Edit Subscription' : 'New Subscription'}
+                    </h2>
+                    <SubForm
+                      initial={selectedSub}
+                      plans={plansQuery.data ?? []}
+                      users={usersQuery.data ?? []}
+                      onSubmit={async (values) => {
+                        if (selectedSub) {
+                          await updateSubMutation.mutateAsync({ id: selectedSub.id, patch: values })
+                        } else {
+                          await createSubMutation.mutateAsync(values)
+                        }
+                        setSubModalOpen(false)
+                      }}
+                      isPending={createSubMutation.isPending || updateSubMutation.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -77,10 +77,6 @@ type CreateRecommendationInput = {
   reason: string;
 };
 
-type UpdateRecommendationInput = Partial<CreateRecommendationInput>;
-
-type UpdateScanInput = Partial<Pick<AdminScanRecord, "score" | "metrics">>;
-
 export type MakeupCatalogRow = {
   productId: string;
   name: string;
@@ -95,6 +91,41 @@ export type MakeupCatalogRow = {
   texture: string | null;
   colorIntensity: number | null;
   patternName: string | null;
+};
+
+export type Plan = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  billing_interval: "month" | "year";
+  scan_limit: number;
+  history_days: number;
+  description: string | null;
+  features: string[];
+  badge: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type SubscriptionStatus = "active" | "cancelled" | "expired" | "pending";
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: SubscriptionStatus;
+  started_at: string;
+  expires_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  plan?: {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    billing_interval: string;
+  };
 };
 
 export const databaseService = {
@@ -729,5 +760,92 @@ export const databaseService = {
     );
     localStorage.setItem("lumina_orders", JSON.stringify(orders));
     return orders;
+  },
+
+  async getPlans() {
+    const { data, error } = await supabase
+      .from("plans")
+      .select("*")
+      .order("price", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as Plan[];
+  },
+
+  // database-service.ts
+  async createPlan(plan: any) {
+    const { data, error } = await (supabase as any)
+      .from("plans")
+      .insert(plan)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updatePlan(id: string, patch: any) {
+    const { data, error } = await (supabase as any)
+      .from("plans")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deletePlan(id: string) {
+    const { error } = await (supabase as any)
+      .from("plans")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async getSubscriptions() {
+    const { data, error } = await (supabase as any)
+      .from("subscriptions")
+      .select(
+        `
+      *,
+      plan:plans(id, name, slug, price, billing_interval)
+    `,
+      )
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Subscription[];
+  },
+
+  async createSubscription(input: {
+    user_id: string;
+    plan_id: string;
+    status: SubscriptionStatus;
+    started_at: string;
+    expires_at: string | null;
+  }) {
+    const { data, error } = await (supabase as any)
+      .from("subscriptions")
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Subscription;
+  },
+
+  async updateSubscription(id: string, patch: any) {
+    const { data, error } = await (supabase as any)
+      .from("subscriptions")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Subscription;
+  },
+
+  async cancelSubscription(id: string) {
+    return this.updateSubscription(id, {
+      status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+    });
   },
 };

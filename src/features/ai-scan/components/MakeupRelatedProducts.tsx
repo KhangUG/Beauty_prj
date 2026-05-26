@@ -8,7 +8,7 @@ type MakeupRelatedProductsProps = {
   activeCategories: string[]
 }
 
-function toGridProduct(product: MatchedMakeupProduct): ProductRecommendation & { matchScore: number; matchReason: string } {
+function toGridProduct(product: MatchedMakeupProduct): ProductRecommendation & { matchReason: string } {
   return {
     id: product.productId,
     name: product.name,
@@ -17,7 +17,6 @@ function toGridProduct(product: MatchedMakeupProduct): ProductRecommendation & {
     reason: product.matchReason,
     externalLink: product.externalLink,
     category: product.categoryName,
-    matchScore: product.matchScore,
     matchReason: product.matchReason,
   }
 }

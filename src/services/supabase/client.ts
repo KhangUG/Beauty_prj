@@ -1,191 +1,198 @@
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseEnv } from '@/config/env'
+import { createClient } from "@supabase/supabase-js";
+import { getSupabaseEnv } from "@/config/env";
 
-export type Json = string | number | boolean | null | { [key: string]: Json } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
 
 export type AppDatabase = {
   public: {
     Tables: {
       products: {
         Row: {
-          id: string
-          created_at: string
-          name: string
-          description: string | null
-          image_url: string | null
-          external_url: string | null
-          brand: string | null
-          category_id: string
-        }
+          id: string;
+          created_at: string;
+          name: string;
+          description: string | null;
+          image_url: string | null;
+          external_url: string | null;
+          brand: string | null;
+          category_id: string;
+        };
         Insert: {
-          id?: string
-          created_at?: string
-          name: string
-          description?: string | null
-          image_url?: string | null
-          external_url?: string | null
-          brand?: string | null
-          category_id: string
-        }
+          id?: string;
+          created_at?: string;
+          name: string;
+          description?: string | null;
+          image_url?: string | null;
+          external_url?: string | null;
+          brand?: string | null;
+          category_id: string;
+        };
         Update: {
-          id?: string
-          created_at?: string
-          name?: string
-          description?: string | null
-          image_url?: string | null
-          external_url?: string | null
-          brand?: string | null
-          category_id?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          created_at?: string;
+          name?: string;
+          description?: string | null;
+          image_url?: string | null;
+          external_url?: string | null;
+          brand?: string | null;
+          category_id?: string;
+        };
+        Relationships: [];
+      };
       scans: {
         Row: {
-          id: string
-          created_at: string
-          user_id: string
-          metrics: Json
-          score: number
-        }
+          id: string;
+          created_at: string;
+          user_id: string;
+          image_url: string; // Thêm vào
+          effects: Json; // Thêm vào (JSON trong Supabase mapping với Json trong TS)
+        };
         Insert: {
-          id?: string
-          created_at?: string
-          user_id: string
-          metrics: Json
-          score: number
-        }
+          id?: string;
+          created_at?: string;
+          user_id: string;
+          image_url: string; // Thêm vào
+          effects: Json; // Thêm vào
+        };
         Update: {
-          id?: string
-          created_at?: string
-          user_id?: string
-          metrics?: Json
-          score?: number
-        }
-        Relationships: []
-      }
-      recommendations: {
+          id?: string;
+          created_at?: string;
+          user_id?: string;
+          image_url?: string; // Thêm vào
+          effects?: Json; // Thêm vào
+        };
+        Relationships: [];
+      };
+      lookbook_items: {
         Row: {
-          id: string
-          created_at: string
-          scan_id: string
-          product_id: string
-          reason: string
-        }
+          id: string;
+          scan_id: string;
+          product_id: string;
+        };
         Insert: {
-          id?: string
-          created_at?: string
-          scan_id: string
-          product_id: string
-          reason: string
-        }
+          id?: string;
+          scan_id: string;
+          product_id: string;
+        };
         Update: {
-          id?: string
-          created_at?: string
-          scan_id?: string
-          product_id?: string
-          reason?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          scan_id?: string;
+          product_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "lookbook_items_scan_id_fkey";
+            columns: ["scan_id"];
+            referencedRelation: "scans";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       categories: {
         Row: {
-          id: string
-          name: string
-          api_category_key: string
-          created_at: string
-        }
+          id: string;
+          name: string;
+          api_category_key: string;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          name: string
-          api_category_key: string
-          created_at?: string
-        }
+          id?: string;
+          name: string;
+          api_category_key: string;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          name?: string
-          api_category_key?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          name?: string;
+          api_category_key?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       product_configs: {
         Row: {
-          id: string
-          product_id: string
-          hex_color: string | null
-          texture: string | null
-          color_intensity: string | null
-          pattern_name: string | null
-          extra_params: Json | null
-          created_at: string
-        }
+          id: string;
+          product_id: string;
+          hex_color: string | null;
+          texture: string | null;
+          color_intensity: string | null;
+          pattern_name: string | null;
+          extra_params: Json | null;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          product_id: string
-          hex_color?: string | null
-          texture?: string | null
-          color_intensity?: string | null
-          pattern_name?: string | null
-          extra_params?: Json | null
-          created_at?: string
-        }
+          id?: string;
+          product_id: string;
+          hex_color?: string | null;
+          texture?: string | null;
+          color_intensity?: string | null;
+          pattern_name?: string | null;
+          extra_params?: Json | null;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          product_id?: string
-          hex_color?: string | null
-          texture?: string | null
-          color_intensity?: string | null
-          pattern_name?: string | null
-          extra_params?: Json | null
-          created_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          product_id?: string;
+          hex_color?: string | null;
+          texture?: string | null;
+          color_intensity?: string | null;
+          pattern_name?: string | null;
+          extra_params?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
-          id: string
-          email: string
-          first_name: string | null
-          last_name: string | null
-          role: string
-          subscription_tier: string
-          try_on_credits: number
-          avatar_url: string | null
-          updated_at: string
-        }
+          id: string;
+          email: string;
+          first_name: string | null;
+          last_name: string | null;
+          role: string;
+          subscription_tier: string;
+          try_on_credits: number;
+          avatar_url: string | null;
+          updated_at: string;
+        };
         Insert: {
-          id: string
-          email: string
-          first_name?: string | null
-          last_name?: string | null
-          role?: string
-          subscription_tier?: string
-          try_on_credits?: number
-          avatar_url?: string | null
-          updated_at?: string
-        }
+          id: string;
+          email: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          role?: string;
+          subscription_tier?: string;
+          try_on_credits?: number;
+          avatar_url?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          email?: string
-          first_name?: string | null
-          last_name?: string | null
-          role?: string
-          subscription_tier?: string
-          try_on_credits?: number
-          avatar_url?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-    }
-    Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
-  }
-}
+          id?: string;
+          email?: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          role?: string;
+          subscription_tier?: string;
+          try_on_credits?: number;
+          avatar_url?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
 
-const supabaseEnv = getSupabaseEnv()
+const supabaseEnv = getSupabaseEnv();
 
 export const supabase = createClient<AppDatabase>(
   supabaseEnv.url,
@@ -199,4 +206,4 @@ export const supabase = createClient<AppDatabase>(
       lock: async (_name, _acquireTimeout, fn) => await fn(),
     },
   },
-)
+);

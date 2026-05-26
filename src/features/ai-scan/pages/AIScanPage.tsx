@@ -19,6 +19,7 @@ import {
   registerScanUsage,
 } from '@/features/ai-scan/services/scan-usage-service'
 import type { MakeupEffect, MakeupVtoTaskStatus } from '@/features/ai-scan/types/makeup-vto'
+import type { ScanResult } from '@/shared/lib/types'
 
 function cloneDefaultEffects(): MakeupEffect[] {
   return DEFAULT_MAKEUP_EFFECTS.map((effect) => ({
@@ -54,7 +55,7 @@ export default function AIScanPage() {
 
   const matchedProducts = useMemo(() => {
     if (!catalogQuery.data?.length) return []
-    return matchProductsToEffects(effects, catalogQuery.data, 12)
+    return matchProductsToEffects(effects, catalogQuery.data)
   }, [effects, catalogQuery.data])
 
   const planId = user ? subscriptionTier : 'guest'
@@ -113,9 +114,19 @@ export default function AIScanPage() {
       setDownloadUrl(result.downloadUrl)
       setIsDemo(result.mode === 'demo')
       setTaskStatus('success')
+
+
+      const scanHistoryEntry: ScanResult = {
+        originalImage: result.originalPublicUrl,
+        appliedEffects: effects,
+        resultImageUrl: result.resultUrl,
+        createdAt: new Date().toISOString(),
+        mode: result.mode,
+      }
+
       if (user?.id) {
         try {
-          await persistScan(user.id, mockScanResult)
+          await persistScan(user.id, scanHistoryEntry)
         } catch (error) {
           console.error('Failed to persist scan history:', error)
           toast.error('Không lưu được lịch sử scan. Vui lòng thử lại sau.')

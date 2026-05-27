@@ -1,3 +1,5 @@
+import type { Plan } from "@/services/supabase/database-service"
+
 export type UserRole = 'guest' | 'user' | 'admin'
 export type SubscriptionTier = 'guest' | 'free' | 'pro' | 'premium'
 
@@ -7,8 +9,9 @@ export interface UserProfile {
   first_name: string | null
   last_name: string | null
   role: UserRole
-  subscription_tier: SubscriptionTier
-  try_on_credits: number
+  plan_id: string | null
+  plan: Plan | null          // joined từ Supabase
   avatar_url: string | null
   updated_at: string
+  stripe_customer_id: string | null
 }

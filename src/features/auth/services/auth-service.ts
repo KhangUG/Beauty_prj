@@ -9,24 +9,24 @@ export const authService = {
 
   async updateProfile(
     userId: string,
-    input: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url' | 'subscription_tier'>>,
+    input: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url'>>,
   ): Promise<UserProfile> {
     const payload = { ...input, updated_at: new Date().toISOString() }
     const { data, error } = await supabase
-      .from('profiles' as const)
-      .update(payload as any)
+      .from('profiles')
+      .update(payload)
       .eq('id', userId)
-      .select('*')
+      .select('*, plan:plans(*)')   // join để trả về plan luôn
       .single()
 
     if (error) throw error
     return data as UserProfile
   },
 
-  async getProfile(userId: string): Promise<UserProfile | null> {
+    async getProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, plan:plans(*)')   // 👈 join sang bảng plans
       .eq('id', userId)
       .single()
 

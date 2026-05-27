@@ -19,7 +19,7 @@ export function useAuth() {
   const avatarUrl = getAvatarUrl(profile, user, user?.id)
   const subscriptionTier = profile?.role === 'admin'
     ? 'admin'
-    : profile?.subscription_tier ?? 'free'
+    : profile?.plan?.slug ?? 'free'
 
   return {
     user,

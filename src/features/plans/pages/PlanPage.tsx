@@ -19,8 +19,6 @@ function formatScans(limit: number): string {
   return `${limit.toLocaleString()} scans / month`
 }
 
-const HIGHLIGHT_SLUG = 'pro'
-
 export default function PlanPage() {
   const toast = useToast()
   const { plans, loading, error } = usePlans()
@@ -30,10 +28,9 @@ export default function PlanPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const isPaidUser = subscriptionTier !== 'free' && subscriptionTier !== 'guest'
-  const activePlan = plans.find(p => p.slug === subscriptionTier) ?? null
 
-  const expiryDate = subscription?.current_period_end
-    ? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+  const expiryDate = subscription?.expires_at
+    ? new Date(subscription.expires_at).toLocaleDateString('en-US', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -51,11 +48,6 @@ export default function PlanPage() {
       setSearchParams({})
     }
   }, [])
-
-  // Paid users only see their current plan and higher tiers
-  const visiblePlans = isPaidUser && activePlan
-    ? plans.filter(p => p.price >= activePlan.price)
-    : plans
 
   return (
     <section className="section-shell pb-16 pt-6">
@@ -75,7 +67,7 @@ export default function PlanPage() {
 
         {/* Loading skeleton */}
         {loading && (
-          <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-96 animate-pulse rounded-[2rem] border border-slate-200/80 bg-slate-100" />
             ))}
@@ -89,103 +81,95 @@ export default function PlanPage() {
           </div>
         )}
 
-        {/* Plan grid — unified for free and paid users */}
+        {/* Plan grid */}
         {!loading && !error && (
-          <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
-            {visiblePlans.map((plan) => {
-              const isHighlight = plan.slug === HIGHLIGHT_SLUG
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+            {plans.map((plan) => {
               const isActive = plan.slug === subscriptionTier
+              const isDisabled = isPaidUser && plan.price === 0
 
               return (
                 <div
                   key={plan.id}
-                  className={`group relative flex w-full max-w-sm flex-col rounded-[2rem] border border-slate-200/80 bg-white p-6 text-slate-900 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] ${
-                    isActive
-                      ? 'ring-2 ring-emerald-400/60'
-                      : isHighlight
-                      ? 'ring-2 ring-rose-400/60'
-                      : ''
+                  className={`group relative flex w-full flex-col rounded-[2rem] border border-slate-200/80 bg-white p-6 text-slate-900 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] ${
+                    isActive ? 'ring-2 ring-emerald-400/20' : ''
                   }`}
                 >
-                  {/* Card tint */}
+                  {/* Card tint — active only */}
                   {isActive && (
-                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-emerald-300/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.9),rgba(236,253,245,0.55))]" />
-                  )}
-                  {!isActive && isHighlight && (
-                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-rose-300/40 bg-[linear-gradient(160deg,rgba(255,255,255,0.9),rgba(255,235,243,0.55))]" />
+                    <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-emerald-300/20 bg-[linear-gradient(160deg,rgba(255,255,255,0.95),rgba(236,253,245,0.2))]" />
                   )}
 
-                  {/* Badges row */}
-                  <div className="flex items-center justify-between">
-                    {plan.badge && (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-600">
-                        {plan.badge}
-                      </span>
-                    )}
-                    {isActive ? (
-                      <span className="ml-auto rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">
-                        Current
-                      </span>
-                    ) : isHighlight ? (
-                      <span className="ml-auto rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-rose-700">
-                        Best value
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Plan name */}
-                  <div className="relative">
-                    <h2 className="mt-5 font-display text-3xl text-slate-900">{plan.name}</h2>
-                    {!isActive && isHighlight && (
-                      <div className="absolute -right-1 -top-6 h-12 w-12 rounded-full bg-rose-200/60 blur-2xl" />
-                    )}
-                  </div>
-
-                  {/* Price */}
-                  <div className="mt-3 space-y-1">
-                    <p className="text-2xl font-semibold text-slate-900">
-                      {formatPrice(plan.price, plan.billing_interval)}
-                    </p>
-                    <p className="text-xs text-slate-500">{formatScans(plan.scan_limit)}</p>
-                  </div>
-
-                  {/* Renewal date — only on the active paid card */}
-                  {isActive && expiryDate && (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      Renews on <span className="font-semibold text-slate-800">{expiryDate}</span>
-                    </div>
-                  )}
-
-                  {plan.description && (
-                    <p className="mt-4 text-sm text-slate-600">{plan.description}</p>
-                  )}
-
-                  {/* Features */}
-                  <div className="mt-6 flex-1 space-y-2 text-sm text-slate-600">
-                    {plan.features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-2">
-                        <span className={`mt-0.5 rounded-full border p-1 ${isActive ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
-                          <Check className={`h-3 w-3 ${isActive ? 'text-emerald-500' : 'text-slate-500'}`} />
+                  {/* Content wrapper — sits above tint */}
+                  <div className="relative z-10 flex flex-1 flex-col">
+                    {/* Badges row */}
+                    <div className="flex items-center justify-between">
+                      {plan.badge && (
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-600">
+                          {plan.badge}
                         </span>
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                      {isActive && (
+                        <span className="ml-auto rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                          Current
+                        </span>
+                      )}
+                    </div>
 
-                  {/* CTA button — hidden on active card */}
-                  {!isActive && (
-                    <Button
-                      className={`mt-6 w-full !rounded-full !px-6 !py-3 text-sm font-semibold ${
-                        isHighlight
-                          ? '!bg-rose-500 !text-white hover:!bg-rose-400 shadow-[0_16px_40px_rgba(244,63,94,0.25)]'
-                          : '!bg-slate-900 !text-white hover:!bg-slate-800'
-                      }`}
-                      onClick={() => setCheckoutPlan(plan)}
-                    >
-                      {isPaidUser ? `Upgrade to ${plan.name}` : `Get ${plan.name}`}
-                    </Button>
-                  )}
+                    {/* Plan name */}
+                    <h2 className="mt-5 font-display text-3xl text-slate-900">{plan.name}</h2>
+
+                    {/* Price */}
+                    <div className="mt-3 space-y-1">
+                      <p className="text-2xl font-semibold text-slate-900">
+                        {formatPrice(plan.price, plan.billing_interval)}
+                      </p>
+                      <p className="text-xs text-slate-500">{formatScans(plan.scan_limit)}</p>
+                    </div>
+
+                    {/* Renewal date — only on the active paid card */}
+                    {isActive && expiryDate && (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                        Renews on <span className="font-semibold text-slate-800">{expiryDate}</span>
+                      </div>
+                    )}
+
+                    {plan.description && (
+                      <p className="mt-4 text-sm text-slate-600">{plan.description}</p>
+                    )}
+
+                    {/* Features */}
+                    <div className="mt-6 flex-1 space-y-2 text-sm text-slate-600">
+                      {plan.features.map((feature, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <span className={`mt-0.5 rounded-full border p-1 ${isActive ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+                            <Check className={`h-3 w-3 ${isActive ? 'text-emerald-500' : 'text-slate-500'}`} />
+                          </span>
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* CTA button — hidden on active card */}
+                    {!isActive && (
+                      <Button
+                        disabled={isDisabled}
+                        className={`mt-6 w-full !rounded-full !px-6 !py-3 text-sm font-semibold ${
+                          isDisabled
+                            ? '!bg-slate-100 !text-slate-400 cursor-not-allowed'
+                            : '!bg-slate-900 !text-white hover:!bg-slate-800'
+                        }`}
+                        onClick={() => !isDisabled && setCheckoutPlan(plan)}
+                      >
+                        {isDisabled
+                          ? 'Not available'
+                          : isPaidUser
+                            ? `Upgrade to ${plan.name}`
+                            : `Get ${plan.name}`}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )
             })}

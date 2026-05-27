@@ -361,7 +361,58 @@ export default function AdminPage() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null)
 
 
+  // Modal states — Products
+  const [productModalOpen, setProductModalOpen] = useState(false)
 
+  // Modal states — Categories  
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [categorySearch, setCategorySearch] = useState('')
+
+  const [userModalOpen, setUserModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [newUserPlanId, setNewUserPlanId] = useState<string>('')
+  const [newUserFirstName, setNewUserFirstName] = useState('')
+  const [newUserLastName, setNewUserLastName] = useState('')
+
+  const [userRoleFilter, setUserRoleFilter] = useState('all')
+  const [userPlanFilter, setUserPlanFilter] = useState('all')
+
+  
+  const openProductModal = (product?: AdminProductRecord) => {
+    setProductForm(product ? mapProductForm(product) : emptyProductForm)
+    setProductModalOpen(true)
+  }
+
+  const openCategoryModal = (category?: { id: string; name: string; api_category_key: string }) => {
+    setCategoryForm(category
+      ? { id: category.id, name: category.name, apiCategoryKey: category.api_category_key }
+      : emptyCategoryForm
+    )
+    setCategoryModalOpen(true)
+  }
+
+  const openUserModal = (user?: any) => {
+    if (user) {
+      setSelectedUser(user)
+      setNewUserEmail(user.email)
+      setNewUserFirstName(user.first_name || '')
+      setNewUserLastName(user.last_name || '')
+      setNewUserRole(user.role ?? 'user')
+      setNewUserPlan(user.plan?.slug ?? 'free')
+      setNewUserPlanId(user.plan_id ?? '')
+      setNewUserPassword('')
+    } else {
+      setSelectedUser(null)
+      setNewUserEmail('')
+      setNewUserPassword('')
+      setNewUserFirstName('')
+      setNewUserLastName('')
+      setNewUserRole('user')
+      setNewUserPlan('free')
+      setNewUserPlanId('')
+    }
+    setUserModalOpen(true)
+  }
   const testPing = async () => {
     setPingStatus('pinging')
     const start = performance.now()
@@ -402,14 +453,18 @@ export default function AdminPage() {
   })
 
   const usersQuery = useQuery({
-    queryKey: ['admin', 'profiles'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*')
-      console.log('profiles data:', data)
-      console.log('profiles error:', error)
-      return data ?? []
-    },
-  })
+  queryKey: ['admin', 'profiles'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        plan:plans(id, name, slug, price, billing_interval)
+      `) as { data: any[] | null; error: any }  // ← cast ở đây
+    if (error) throw error
+    return data ?? []
+  },
+})
 
   const ordersQuery = useQuery({
     queryKey: ['admin', 'orders'],
@@ -463,6 +518,18 @@ export default function AdminPage() {
       return matchSearch && matchStatus
     })
   }, [ordersQuery.data, orderSearch, orderStatusFilter])
+
+  const filteredUsers = useMemo(() => {
+    const list = usersQuery.data ?? []
+    return list.filter((u: any) => {
+    const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ').toLowerCase()
+      const q = userSearch.toLowerCase()
+      const matchSearch = u.email.toLowerCase().includes(q) || fullName.includes(q)
+      const matchRole = userRoleFilter === 'all' || u.role === userRoleFilter
+      const matchPlan = userPlanFilter === 'all' || u.plan?.slug === userPlanFilter
+      return matchSearch && matchRole && matchPlan
+    })
+  }, [usersQuery.data, userSearch, userRoleFilter, userPlanFilter])
 
   const filteredAdminScans = useMemo(() => {
     return (scansQuery.data ?? []).filter((scan) => {
@@ -549,21 +616,33 @@ export default function AdminPage() {
   // }, [scansQuery.data, scanSearch])
 
 
-  const filteredUsers = useMemo(() => {
-    const list = usersQuery.data ?? []
-    return list.filter((u) => u.email.toLowerCase().includes(userSearch.toLowerCase()))
-  }, [usersQuery.data, userSearch])
+  
 
   const paginatedProducts = useMemo(() => {
     return filteredProducts.slice((productPage - 1) * productItemsPerPage, productPage * productItemsPerPage)
   }, [filteredProducts, productPage])
   const totalProductPages = Math.ceil(filteredProducts.length / productItemsPerPage)
 
-  const paginatedCategories = useMemo(() => {
+  // MỚI
+  const filteredCategories = useMemo(() => {
     const list = categoriesQuery.data ?? []
-    return list.slice((categoryPage - 1) * categoryItemsPerPage, categoryPage * categoryItemsPerPage)
-  }, [categoriesQuery.data, categoryPage])
-  const totalCategoryPages = Math.ceil((categoriesQuery.data?.length ?? 0) / categoryItemsPerPage)
+    const q = categorySearch.toLowerCase()
+    return q
+      ? list.filter((c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.api_category_key.toLowerCase().includes(q)
+        )
+      : list
+  }, [categoriesQuery.data, categorySearch])
+
+  const paginatedCategories = useMemo(() => {
+    return filteredCategories.slice(
+      (categoryPage - 1) * categoryItemsPerPage,
+      categoryPage * categoryItemsPerPage,
+    )
+  }, [filteredCategories, categoryPage])
+
+  const totalCategoryPages = Math.ceil(filteredCategories.length / categoryItemsPerPage)
 
   // Overview Stats Setup
   const overviewCards = useMemo(
@@ -780,6 +859,20 @@ export default function AdminPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      await useAuthStore.getState().initialize()
+    },
+  })
+
+  const updateUserPlanMutation = useMutation({
+    mutationFn: async ({ userId, planId, role, firstName, lastName }: { userId: string; planId: string, role: string, firstName: string, lastName: string }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ plan_id: planId || null, role: role, first_name: firstName, last_name: lastName } as any)  // ← thêm `as any`
+        .eq('id', userId)
+      if (error) throw error
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'profiles'] })
       await useAuthStore.getState().initialize()
     },
   })
@@ -1203,302 +1296,273 @@ export default function AdminPage() {
           {/* PRODUCTS TAB */}
           {activeSection === 'products' ? (
             <div className="space-y-4">
-              {/* Product Form */}
-              <Card className="border border-rose-100 p-6 self-start bg-white shadow-sm">
-                <AdminSectionTitle
-                  eyebrow="Product Management"
-                  title={productForm.id ? 'Edit Product' : 'Add New Product'}
-                  description="Add or edit a product. Name, brand and category are saved to the catalog."
-                />
-                <div className="mt-5 space-y-4">
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Product Name</label>
-                    <Input
-                      placeholder="Product name (e.g. Cleanser)"
-                      value={productForm.name}
-                      onChange={(event) => setProductForm((state) => ({ ...state, name: event.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Description</label>
-                    <textarea
-                      className="min-h-[90px] w-full rounded-2xl border border-rose-200/80 bg-white/80 px-4 py-3 text-sm text-pearl placeholder:text-mist/70 focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
-                      placeholder="Enter detailed product description..."
-                      value={productForm.description}
-                      onChange={(event) => setProductForm((state) => ({ ...state, description: event.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Brand</label>
-                      <Input
-                        placeholder="e.g. L'Oréal"
-                        value={productForm.brand}
-                        onChange={(event) => setProductForm((state) => ({ ...state, brand: event.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Category *</label>
-                      <select
-                        className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
-                        value={productForm.categoryId}
-                        onChange={(event) => {
-                          setProductForm((state) => ({
-                            ...state,
-                            categoryId: event.target.value,
-                          }))
-                        }}
-                      >
-                        <option value="">Select Category</option>
-                        {(categoriesQuery.data ?? []).map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Image URL</label>
-                    <Input
-                      placeholder="https://images.unsplash.com/photo-..."
-                      value={productForm.imageUrl}
-                      onChange={(event) => setProductForm((state) => ({ ...state, imageUrl: event.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Partner URL (optional)</label>
-                    <Input
-                      placeholder="https://example.com/partner-item"
-                      value={productForm.externalUrl}
-                      onChange={(event) => setProductForm((state) => ({ ...state, externalUrl: event.target.value }))}
-                    />
-                  </div>
-
-                  {saveProductMutation.error ? (
-                    <p className="text-sm text-rose-500">{saveProductMutation.error.message}</p>
-                  ) : null}
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <Button
-                      onClick={() => saveProductMutation.mutate()}
-                      disabled={saveProductMutation.isPending}
-                    >
-                      {saveProductMutation.isPending ? 'Saving...' : productForm.id ? 'Update Product' : 'Create Product'}
-                    </Button>
-                    <Button variant="ghost" onClick={() => setProductForm(emptyProductForm)}>
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Products List */}
-              <div className="space-y-4">
-                {/* Search & Filters */}
-                <div className="bg-white border border-rose-100 rounded-3xl p-4 flex flex-wrap gap-3 items-center">
-                  <div className="flex-1 relative min-w-[200px]">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-mist" />
-                    <input
-                      type="text"
-                      className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
-                      placeholder="Search products by name or brand..."
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                    />
-                  </div>
-
-                  <select
-                    className="rounded-full border border-rose-100 px-3 py-2 text-sm text-pearl focus:outline-none"
-                    value={productCategoryFilter}
-                    onChange={(e) => setProductCategoryFilter(e.target.value)}
-                  >
-                    <option value="All">All Categories</option>
-                    {(categoriesQuery.data ?? []).map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <Card className="border border-rose-100 p-6 bg-white shadow-sm overflow-x-auto">
-                  <AdminSectionTitle
-                    eyebrow="Product List"
-                    title="Catalog Detail Table"
-                    description={`${filteredProducts.length} product(s) — image preview, full description, IDs, and partner links.`}
+              {/* Search & Filters */}
+              <div className="bg-white border border-rose-100 rounded-3xl p-4 flex flex-wrap gap-3 items-center">
+                <div className="flex-1 relative min-w-[200px]">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-mist" />
+                  <input
+                    type="text"
+                    className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
+                    placeholder="Search products by name or brand..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
                   />
-                  <div className="mt-6 overflow-x-auto">
-                    <table className="w-full min-w-[960px] text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
-                          <th className="pb-3 pr-3 w-[72px]">Image</th>
-                          <th className="pb-3 px-3 min-w-[200px]">Product</th>
-                          <th className="pb-3 px-3">Brand</th>
-                          <th className="pb-3 px-3">Category</th>
-                          <th className="pb-3 px-3 min-w-[180px]">Links</th>
-                          <th className="pb-3 px-3 whitespace-nowrap">Created</th>
-                          <th className="pb-3 pl-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-rose-50">
-                        {paginatedProducts.map((product) => {
-                          const categoryName = categoriesQuery.data?.find((category) => category.id === product.category_id)?.name ?? 'Unknown'
-                          const imageSrc = product.image_url?.trim() || PRODUCT_PLACEHOLDER_IMAGE
-                          return (
-                            <tr key={product.id} className="hover:bg-rose-50/20 text-rose-950 align-top">
-                              <td className="py-3 pr-3">
-                                <img
-                                  src={imageSrc}
-                                  alt={product.name}
-                                  loading="lazy"
-                                  className="h-14 w-14 shrink-0 rounded-xl border border-rose-100 bg-rose-50 object-cover"
-                                  onError={(event) => {
-                                    event.currentTarget.onerror = null
-                                    event.currentTarget.src = PRODUCT_PLACEHOLDER_IMAGE
-                                  }}
-                                />
-                              </td>
-                              <td className="py-3 px-3">
-                                <div className="min-w-0 max-w-[280px]">
-                                  <p className="font-bold text-sm leading-tight text-rose-950">{product.name}</p>
-                                  <p className="mt-1 font-mono text-[10px] text-mist/80 break-all" title={product.id}>
-                                    ID: {product.id}
-                                  </p>
-                                  <p className="mt-1.5 text-[11px] leading-relaxed text-mist whitespace-pre-wrap break-words">
-                                    {product.description?.trim() || '—'}
-                                  </p>
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-mist whitespace-nowrap">
-                                {product.brand?.trim() || '—'}
-                              </td>
-                              <td className="py-3 px-3">
-                                <p className="font-semibold text-rose-600">{categoryName}</p>
-                                <p className="mt-0.5 font-mono text-[10px] text-mist/70 break-all" title={product.category_id}>
-                                  {product.category_id}
+                </div>
+                <select
+                  className="rounded-full border border-rose-100 px-3 py-2 text-sm text-pearl focus:outline-none"
+                  value={productCategoryFilter}
+                  onChange={(e) => setProductCategoryFilter(e.target.value)}
+                >
+                  <option value="All">All Categories</option>
+                  {(categoriesQuery.data ?? []).map((category) => (
+                    <option key={category.id} value={category.name}>{category.name}</option>
+                  ))}
+                </select>
+                <Button onClick={() => openProductModal()}>
+                  + Add Product
+                </Button>
+              </div>
+
+              {/* Products Table */}
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm overflow-x-auto">
+                <AdminSectionTitle
+                  eyebrow="Product List"
+                  title="Manage Products"
+                  description={`${filteredProducts.length} product(s) — image preview, full description, IDs, and partner links.`}
+                />
+                <div className="mt-6 overflow-x-auto">
+                  <table className="w-full min-w-[960px] text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                        <th className="pb-3 pr-3 w-[72px]">Image</th>
+                        <th className="pb-3 px-3 min-w-[200px]">Product</th>
+                        <th className="pb-3 px-3">Brand</th>
+                        <th className="pb-3 px-3">Category</th>
+                        <th className="pb-3 px-3 min-w-[180px]">Links</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Created</th>
+                        <th className="pb-3 pl-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50">
+                      {paginatedProducts.map((product) => {
+                        const categoryName = categoriesQuery.data?.find((c) => c.id === product.category_id)?.name ?? 'Unknown'
+                        const imageSrc = product.image_url?.trim() || PRODUCT_PLACEHOLDER_IMAGE
+                        return (
+                          <tr key={product.id} className="hover:bg-rose-50/20 text-rose-950 align-top">
+                            <td className="py-3 pr-3">
+                              <img
+                                src={imageSrc}
+                                alt={product.name}
+                                loading="lazy"
+                                className="h-14 w-14 shrink-0 rounded-xl border border-rose-100 bg-rose-50 object-cover"
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = PRODUCT_PLACEHOLDER_IMAGE }}
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="min-w-0 max-w-[280px]">
+                                <p className="font-bold text-sm leading-tight text-rose-950">{product.name}</p>
+                                <p className="mt-1 font-mono text-[10px] text-mist/80 break-all">ID: {product.id}</p>
+                                <p className="mt-1.5 text-[11px] leading-relaxed text-mist whitespace-pre-wrap break-words">
+                                  {product.description?.trim() || '—'}
                                 </p>
-                              </td>
-                              <td className="py-3 px-3 text-mist">
-                                <div className="space-y-2 min-w-0 max-w-[220px]">
-                                  {product.image_url?.trim() ? (
-                                    <a
-                                      href={product.image_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all"
-                                    >
-                                      <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" />
-                                      Image URL
-                                    </a>
-                                  ) : (
-                                    <span className="text-[10px]">No image URL</span>
-                                  )}
-                                  {product.external_url?.trim() ? (
-                                    <a
-                                      href={product.external_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all"
-                                    >
-                                      <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" />
-                                      Partner URL
-                                    </a>
-                                  ) : (
-                                    <span className="text-[10px]">No partner URL</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-mist whitespace-nowrap">
-                                {formatDate(product.created_at)}
-                              </td>
-                              <td className="py-3 pl-3 text-right">
-                                <div className="flex justify-end gap-1">
-                                  <Button size="sm" variant="ghost" onClick={() => setProductForm(mapProductForm(product))}>
-                                    <PencilLine className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete ${product.name}?`)) deleteProductMutation.mutate(product.id) }} disabled={deleteProductMutation.isPending}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                    {paginatedProducts.length === 0 && (
-                      <div className="text-center py-12 text-mist text-sm">
-                        No products match the search or category filter.
-                      </div>
-                    )}
-                  </div>
-                  {totalProductPages > 1 && (
-                    <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
-                      <Button variant="ghost" size="sm" disabled={productPage === 1} onClick={() => setProductPage(p => Math.max(1, p - 1))}>
-                        <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-                      </Button>
-                      <span className="text-xs font-semibold text-pearl">Page {productPage} of {totalProductPages}</span>
-                      <Button variant="ghost" size="sm" disabled={productPage === totalProductPages} onClick={() => setProductPage(p => Math.min(totalProductPages, p + 1))}>
-                        Next <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-mist whitespace-nowrap">{product.brand?.trim() || '—'}</td>
+                            <td className="py-3 px-3">
+                              <p className="font-semibold text-rose-600">{categoryName}</p>
+                              <p className="mt-0.5 font-mono text-[10px] text-mist/70 break-all">{product.category_id}</p>
+                            </td>
+                            <td className="py-3 px-3 text-mist">
+                              <div className="space-y-2 min-w-0 max-w-[220px]">
+                                {product.image_url?.trim() ? (
+                                  <a href={product.image_url} target="_blank" rel="noreferrer"
+                                    className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all">
+                                    <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" /> Image URL
+                                  </a>
+                                ) : <span className="text-[10px]">No image URL</span>}
+                                {product.external_url?.trim() ? (
+                                  <a href={product.external_url} target="_blank" rel="noreferrer"
+                                    className="inline-flex items-start gap-1 text-[10px] text-cyan-700 hover:underline break-all">
+                                    <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" /> Partner URL
+                                  </a>
+                                ) : <span className="text-[10px]">No partner URL</span>}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-mist whitespace-nowrap">{formatDate(product.created_at)}</td>
+                            <td className="py-3 pl-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => openProductModal(product)}>
+                                  <PencilLine className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost"
+                                  onClick={() => { if (confirm(`Delete ${product.name}?`)) deleteProductMutation.mutate(product.id) }}
+                                  disabled={deleteProductMutation.isPending}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  {paginatedProducts.length === 0 && (
+                    <div className="text-center py-12 text-mist text-sm">
+                      No products match the search or category filter.
                     </div>
                   )}
-                </Card>
-              </div>
+                </div>
+                {totalProductPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
+                    <Button variant="ghost" size="sm" disabled={productPage === 1}
+                      onClick={() => setProductPage(p => Math.max(1, p - 1))}>
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <span className="text-xs font-semibold text-pearl">Page {productPage} of {totalProductPages}</span>
+                    <Button variant="ghost" size="sm" disabled={productPage === totalProductPages}
+                      onClick={() => setProductPage(p => Math.min(totalProductPages, p + 1))}>
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
+              {/* ─── Product Modal ─── */}
+              {productModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setProductModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-lg overflow-y-auto max-h-[90vh] rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button
+                      onClick={() => setProductModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    <h2 className="font-display text-xl text-rose-950">
+                      {productForm.id ? 'Edit Product' : 'Add New Product'}
+                    </h2>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Product Name</label>
+                        <Input
+                          placeholder="Product name (e.g. Cleanser)"
+                          value={productForm.name}
+                          onChange={(e) => setProductForm((s) => ({ ...s, name: e.target.value }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Description</label>
+                        <textarea
+                          className="min-h-[90px] w-full rounded-2xl border border-rose-200/80 bg-white/80 px-4 py-3 text-sm text-pearl placeholder:text-mist/70 focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                          placeholder="Enter detailed product description..."
+                          value={productForm.description}
+                          onChange={(e) => setProductForm((s) => ({ ...s, description: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Brand</label>
+                          <Input
+                            placeholder="e.g. L'Oréal"
+                            value={productForm.brand}
+                            onChange={(e) => setProductForm((s) => ({ ...s, brand: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Category *</label>
+                          <select
+                            className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                            value={productForm.categoryId}
+                            onChange={(e) => setProductForm((s) => ({ ...s, categoryId: e.target.value }))}
+                          >
+                            <option value="">Select Category</option>
+                            {(categoriesQuery.data ?? []).map((cat) => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Image URL</label>
+                        <Input
+                          placeholder="https://images.unsplash.com/photo-..."
+                          value={productForm.imageUrl}
+                          onChange={(e) => setProductForm((s) => ({ ...s, imageUrl: e.target.value }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Partner URL (optional)</label>
+                        <Input
+                          placeholder="https://example.com/partner-item"
+                          value={productForm.externalUrl}
+                          onChange={(e) => setProductForm((s) => ({ ...s, externalUrl: e.target.value }))}
+                        />
+                      </div>
+
+                      {saveProductMutation.error && (
+                        <p className="text-sm text-rose-500">{saveProductMutation.error.message}</p>
+                      )}
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="ghost" onClick={() => setProductModalOpen(false)}>Cancel</Button>
+                        <Button
+                          onClick={async () => {
+                            await saveProductMutation.mutateAsync()
+                            setProductModalOpen(false)
+                          }}
+                          disabled={saveProductMutation.isPending}
+                        >
+                          {saveProductMutation.isPending
+                            ? 'Saving...'
+                            : productForm.id ? 'Update Product' : 'Create Product'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
 
           {/* CATEGORIES TAB */}
           {activeSection === 'categories' ? (
             <div className="space-y-4">
-              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
-                <AdminSectionTitle
-                  eyebrow="Product Categories"
-                  title={categoryForm.id ? 'Edit Category' : 'Add New Category'}
-                  description="Manage top-level categories and API category keys for AI data sync."
+              {/* Header + Add button */}
+              <div className="bg-white border border-rose-100 rounded-3xl p-4 flex flex-wrap gap-3 items-center">
+              <div className="flex-1 relative min-w-[200px]">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-mist" />
+                <input
+                  type="text"
+                  className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
+                  placeholder="Search by name or API key..."
+                  value={categorySearch}
+                  onChange={(e) => {
+                    setCategorySearch(e.target.value)
+                    setCategoryPage(1) // reset về trang 1 khi tìm
+                  }}
                 />
-                <div className="mt-5 space-y-4">
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Category Name</label>
-                    <Input
-                      placeholder="e.g. Lipstick"
-                      value={categoryForm.name}
-                      onChange={(event) => setCategoryForm((state) => ({ ...state, name: event.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">API Category Key</label>
-                    <Input
-                      placeholder="e.g. lip_color"
-                      value={categoryForm.apiCategoryKey}
-                      onChange={(event) => setCategoryForm((state) => ({ ...state, apiCategoryKey: event.target.value }))}
-                    />
-                  </div>
-                  {saveCategoryMutation.error ? (
-                    <p className="text-sm text-rose-500">{saveCategoryMutation.error.message}</p>
-                  ) : null}
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <Button onClick={() => saveCategoryMutation.mutate()} disabled={saveCategoryMutation.isPending}>
-                      {saveCategoryMutation.isPending ? 'Saving...' : categoryForm.id ? 'Update Category' : 'Create Category'}
-                    </Button>
-                    <Button variant="ghost" onClick={() => setCategoryForm(emptyCategoryForm)}>
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+              </div>
+              <Button onClick={() => openCategoryModal()}>
+                + Add Category
+              </Button>
+            </div>
 
+              {/* Categories Table */}
               <Card className="border border-rose-100 p-6 bg-white shadow-sm">
                 <AdminSectionTitle
                   eyebrow="Category List"
-                  title="Existing Categories"
-                  description="Review, edit, or delete created categories to sync with products."
+                  title="Manage Categories"
+                  description={`${filteredCategories.length} categor${filteredCategories.length === 1 ? 'y' : 'ies'} found.`}
                 />
-                <div className="mt-5 overflow-x-auto">
+                <div className="mt-6 overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
@@ -1516,7 +1580,7 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-mist">{formatDate(category.created_at)}</td>
                           <td className="py-3 pl-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => setCategoryForm({ id: category.id, name: category.name, apiCategoryKey: category.api_category_key })}>
+                              <Button size="sm" variant="ghost" onClick={() => openCategoryModal(category)}>
                                 Edit
                               </Button>
                               <Button
@@ -1537,22 +1601,85 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
-                  {paginatedCategories.length === 0 ? (
-                    <p className="mt-4 text-sm text-mist text-center py-4">No categories available. Create a new category to get started.</p>
-                  ) : null}
+                  {paginatedCategories.length === 0 && (
+                    <p className="mt-4 text-sm text-mist text-center py-4">
+                      No categories available. Click "Add Category" to get started.
+                    </p>
+                  )}
                 </div>
                 {totalCategoryPages > 1 && (
                   <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-rose-100">
-                    <Button variant="ghost" size="sm" disabled={categoryPage === 1} onClick={() => setCategoryPage(p => Math.max(1, p - 1))}>
+                    <Button variant="ghost" size="sm" disabled={categoryPage === 1}
+                      onClick={() => setCategoryPage(p => Math.max(1, p - 1))}>
                       <ChevronLeft className="h-4 w-4 mr-1" /> Prev
                     </Button>
                     <span className="text-xs font-semibold text-pearl">Page {categoryPage} of {totalCategoryPages}</span>
-                    <Button variant="ghost" size="sm" disabled={categoryPage === totalCategoryPages} onClick={() => setCategoryPage(p => Math.min(totalCategoryPages, p + 1))}>
+                    <Button variant="ghost" size="sm" disabled={categoryPage === totalCategoryPages}
+                      onClick={() => setCategoryPage(p => Math.min(totalCategoryPages, p + 1))}>
                       Next <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
                 )}
               </Card>
+
+              {/* ─── Category Modal ─── */}
+              {categoryModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setCategoryModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-md rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button
+                      onClick={() => setCategoryModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    <h2 className="font-display text-xl text-rose-950">
+                      {categoryForm.id ? 'Edit Category' : 'Add New Category'}
+                    </h2>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Category Name</label>
+                        <Input
+                          placeholder="e.g. Lipstick"
+                          value={categoryForm.name}
+                          onChange={(e) => setCategoryForm((s) => ({ ...s, name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">API Category Key</label>
+                        <Input
+                          placeholder="e.g. lip_color"
+                          value={categoryForm.apiCategoryKey}
+                          onChange={(e) => setCategoryForm((s) => ({ ...s, apiCategoryKey: e.target.value }))}
+                        />
+                      </div>
+
+                      {saveCategoryMutation.error && (
+                        <p className="text-sm text-rose-500">{saveCategoryMutation.error.message}</p>
+                      )}
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="ghost" onClick={() => setCategoryModalOpen(false)}>Cancel</Button>
+                        <Button
+                          onClick={async () => {
+                            await saveCategoryMutation.mutateAsync()
+                            setCategoryModalOpen(false)
+                          }}
+                          disabled={saveCategoryMutation.isPending}
+                        >
+                          {saveCategoryMutation.isPending
+                            ? 'Saving...'
+                            : categoryForm.id ? 'Update Category' : 'Create Category'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -1797,23 +1924,23 @@ export default function AdminPage() {
                               </span>
                             </td>
                             <td className="py-3 px-3">
-  <div className="flex flex-wrap gap-1.5">
-    {(scan.effects ?? []).map((e: any) => (
-      <span
-        key={e.category}
-        className={cn(
-          'rounded-full px-2.5 py-0.5 text-[11px] capitalize',
-          e.enabled
-            ? 'bg-rose-50 border border-rose-100 text-rose-600'
-            : 'bg-mist/20 border border-mist text-mist',
-        )}
-      >
-        {e.category.replace(/_/g, ' ')}
-        {e.enabled ? ' (Active)' : ' (Disabled)'}
-      </span>
-    ))}
-  </div>
-</td>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(scan.effects ?? []).map((e: any) => (
+                                  <span
+                                    key={e.category}
+                                    className={cn(
+                                      'rounded-full px-2.5 py-0.5 text-[11px] capitalize',
+                                      e.enabled
+                                        ? 'bg-rose-50 border border-rose-100 text-rose-600'
+                                        : 'bg-mist/20 border border-mist text-mist',
+                                    )}
+                                  >
+                                    {e.category.replace(/_/g, ' ')}
+                                    {e.enabled ? ' (Active)' : ' (Disabled)'}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
                             <td className="py-3 px-3 text-mist whitespace-nowrap">
                               {formatDate(scan.created_at)}
                             </td>
@@ -2007,188 +2134,363 @@ export default function AdminPage() {
 
           {/* ACCESS CONTROL MANAGER */}
           {activeSection === 'access' ? (
-            <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-              {/* Users list and Role Editor */}
-              <Card className="border border-rose-100 p-6 bg-white shadow-sm space-y-5">
-                <div>
-                  <h3 className="font-display text-2xl text-rose-950">User Access Control</h3>
-                  <p className="text-xs text-mist mt-1">
-                    Manage trial user permissions. Setting an account to "user" will instantly revoke admin access.
-                  </p>
-                </div>
-
+            <div className="space-y-4">
+              {/* Search + Add */}
+              <div className="bg-white border border-rose-100 rounded-3xl p-4 flex flex-wrap gap-3 items-center">
                 {/* Search */}
-                <div className="relative">
+                <div className="flex-1 relative min-w-[200px]">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-mist" />
                   <input
                     type="text"
                     className="w-full rounded-full border border-rose-100 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-rose-200"
-                    placeholder="Search users by email..."
+                    placeholder="Search by email or name..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
                 </div>
 
-                {/* Users Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                {/* Role filter */}
+                <select
+                  className="rounded-full border border-rose-100 px-3 py-2 text-sm text-pearl focus:outline-none"
+                  value={userRoleFilter}
+                  onChange={(e) => setUserRoleFilter(e.target.value)}
+                >
+                  <option value="all">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                </select>
+
+                {/* Plan filter — dynamic từ plansQuery */}
+                <select
+                  className="rounded-full border border-rose-100 px-3 py-2 text-sm text-pearl focus:outline-none"
+                  value={userPlanFilter}
+                  onChange={(e) => setUserPlanFilter(e.target.value)}
+                >
+                  <option value="all">All Plans</option>
+                  <option value="">No Plan</option>
+                  {(plansQuery.data ?? []).map((p: any) => (
+                    <option key={p.id} value={p.slug}>{p.name}</option>
+                  ))}
+                </select>
+
+                <Button onClick={() => openUserModal()}>
+                  + Add User
+                </Button>
+              </div>
+
+              {/* Table */}
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="User Access Control"
+                  title="Manage Users"
+                  description={`${filteredUsers.length} user(s) — role, plan, and profile details.`}
+                />
+
+                <div className="mt-6 overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
-                        <th className="pb-3 pr-2">Email</th>
-                        <th className="pb-3 px-2">Assigned Role</th>
-                        <th className="pb-3 px-2">Subscription</th>
-                        <th className="pb-3 px-2">Created At</th>
-                        <th className="pb-3 pl-2 text-right">Actions</th>
+                        <th className="pb-3 pr-3">User</th>
+                        <th className="pb-3 px-3">Role</th>
+                        <th className="pb-3 px-3">Plan</th>
+                        <th className="pb-3 px-3">Updated At</th>
+                        <th className="pb-3 pl-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-rose-50">
-                      {filteredUsers.map((item) => (
-                        <tr key={item.id} className="hover:bg-rose-50/20 text-rose-950">
-                          <td className="py-3 pr-2 font-medium truncate max-w-[150px]" title={item.email}>
-                            {item.email}
-                            {item.email.toLowerCase() === currentAuthUser?.email?.toLowerCase() && (
-                              <span className="ml-1 text-[9px] bg-cyan/10 text-cyan-700 px-1 py-0.5 rounded font-extrabold">You</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-2">
-                            <select
-                              className="rounded border border-rose-100 bg-white px-2 py-1 focus:outline-none text-[11px]"
-                              value={item.role}
-                              onChange={(e) => updateUserRoleMutation.mutate({ userId: item.id, role: e.target.value })}
-                            >
-                              <option value="admin">Admin</option>
-                              <option value="user">User (No Admin Access)</option>
-                            </select>
-                          </td>
-                          <td className="py-3 px-2">
-                            <select
-                              className="rounded border border-rose-100 bg-white px-2 py-1 focus:outline-none text-[11px]"
-                              value={(item as any).subscription_tier ?? 'free'}
-                              onChange={(e) => updateUserSubscriptionTierMutation.mutate({ userId: item.id, subscriptionTier: e.target.value })}
-                            >
-                              <option value="free">Free</option>
-                              <option value="premium">Premium</option>
-                              <option value="pro">Pro</option>
-                            </select>
-                          </td>
-                          <td className="py-3 px-2 text-mist">
-                            {new Date(item.updated_at).toLocaleDateString()}
-                          </td>
-                          <td className="py-3 pl-2 text-right">
-                            <button
-                              onClick={() => {
-                                if (confirm(`Remove custom role of ${item.email}?`)) {
-                                  deleteUserRoleMutation.mutate(item.id)
-                                }
-                              }}
-                              className="text-rose-600 hover:text-rose-800"
-                              disabled={deleteUserRoleMutation.isPending}
-                            >
-                              Reset
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredUsers.map((item: any) => {
+                        const fullName = [item.first_name, item.last_name].filter(Boolean).join(' ')
+                        return (
+                          <tr key={item.id} className="hover:bg-rose-50/20 text-rose-950 align-middle">
+                            {/* Avatar + name + email */}
+                            <td className="py-3 pr-3">
+                              <div className="flex items-center gap-3">
+                                {item.avatar_url ? (
+                                  <img
+                                    src={item.avatar_url}
+                                    alt={fullName || item.email}
+                                    className="h-9 w-9 rounded-full border border-rose-100 object-cover shrink-0"
+                                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                                  />
+                                ) : (
+                                  <div className="h-9 w-9 rounded-full bg-rose-100 flex items-center justify-center shrink-0 text-rose-500 font-bold text-sm">
+                                    {(item.email?.[0] ?? '?').toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-rose-950 truncate max-w-[180px]">
+                                    {fullName || <span className="text-mist italic font-normal">No name</span>}
+                                    {item.email?.toLowerCase() === currentAuthUser?.email?.toLowerCase() && (
+                                      <span className="ml-1 text-[9px] bg-cyan/10 text-cyan-700 px-1.5 py-0.5 rounded font-extrabold">You</span>
+                                    )}
+                                  </p>
+                                  <p className="text-mist truncate max-w-[180px]" title={item.email}>{item.email}</p>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Role badge */}
+                            <td className="py-3 px-3">
+                              <span className={cn(
+                                'rounded-lg px-2.5 py-1 text-[10px] font-bold border uppercase tracking-wide',
+                                item.role === 'admin'
+                                  ? 'bg-rose-50 text-rose-600 border-rose-200'
+                                  : 'bg-gray-50 text-gray-500 border-gray-200',
+                              )}>
+                                {item.role ?? 'user'}
+                              </span>
+                            </td>
+
+                            {/* Plan badge */}
+                            <td className="py-3 px-3">
+                              {item.plan ? (
+                                <div>
+                                  <span className={cn(
+                                    'rounded-lg px-2.5 py-1 text-[10px] font-bold border uppercase tracking-wide',
+                                    item.plan.slug === 'pro'
+                                      ? 'bg-cyan/10 text-cyan-700 border-cyan/20'
+                                      : item.plan.slug === 'premium'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-100'
+                                      : 'bg-gray-50 text-gray-500 border-gray-200',
+                                  )}>
+                                    {item.plan.name}
+                                  </span>
+                                  <p className="mt-1 text-[10px] text-mist">
+                                    ${Number(item.plan.price).toFixed(2)}/{item.plan.billing_interval}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold border uppercase bg-gray-50 text-gray-400 border-gray-200">
+                                  No Plan
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 text-mist whitespace-nowrap">
+                              {new Date(item.updated_at).toLocaleDateString('vi-VN')}
+                            </td>
+
+                            <td className="py-3 pl-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => openUserModal(item)}>
+                                  <PencilLine className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    if (confirm(`Remove custom role of ${item.email}?`)) {
+                                      deleteUserRoleMutation.mutate(item.id)
+                                    }
+                                  }}
+                                  disabled={deleteUserRoleMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
+                  {filteredUsers.length === 0 && (
+                    <div className="text-center py-12 text-mist text-sm">No users found.</div>
+                  )}
                 </div>
               </Card>
 
-              {/* Add User Panel & Role Explanations */}
-              <div className="space-y-4">
-                {/* Add Custom User Form */}
-                <Card className="border border-rose-100 p-6 bg-white shadow-sm space-y-4">
-                  <h3 className="font-display text-xl text-rose-950 flex items-center gap-1.5">
-                    <PlusCircle className="h-5 w-5 text-rose-500" />
-                    Assign Role to User
-                  </h3>
-                  <p className="text-xs text-mist leading-relaxed">
-                    Grant access to specific modules for test or Supabase users. Permissions take effect immediately.
-                  </p>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">User Email</label>
-                      <Input
-                        placeholder="e.g. client@lumina.ai"
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                      />
+              {/* Role Matrix */}
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="Access Matrix"
+                  title="Role Module Scopes"
+                  description="List of visible modules based on role mapping rules."
+                />
+                <div className="mt-5 space-y-3 text-xs text-rose-950">
+                  {[
+                    { role: 'Admin', scope: 'Full access to manage users, catalog, scans, recommendations and settings.' },
+                    { role: 'User', scope: 'Standard access without admin panels. Can run scans and use subscription benefits.' },
+                  ].map((item) => (
+                    <div key={item.role} className="rounded-2xl border border-rose-50 bg-rose-50/20 px-3 py-2.5">
+                      <p className="font-semibold flex items-center gap-1.5">
+                        <UserCheck className="h-3.5 w-3.5 text-rose-500" />
+                        {item.role}
+                      </p>
+                      <p className="mt-1 text-[11px] text-mist">{item.scope}</p>
                     </div>
+                  ))}
+                </div>
+              </Card>
 
-                    <div>
-                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Password</label>
-                      <Input
-                        type="password"
-                        placeholder="Minimum 8 characters"
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Access Level</label>
-                      <select
-                        className="w-full rounded-2xl border border-rose-200/80 bg-white px-4 py-2.5 text-xs text-pearl focus:outline-none focus:ring-1 focus:ring-rose-300"
-                        value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value as any)}
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="user">Standard User</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-semibold text-rose-950 uppercase tracking-wide block mb-1">Subscription Plan</label>
-                      <select
-                        className="w-full rounded-2xl border border-rose-200/80 bg-white px-4 py-2.5 text-xs text-pearl focus:outline-none focus:ring-1 focus:ring-rose-300"
-                        value={newUserPlan}
-                        onChange={(e) => setNewUserPlan(e.target.value as 'free' | 'premium' | 'pro')}
-                      >
-                        <option value="free">Free</option>
-                        <option value="premium">Premium</option>
-                        <option value="pro">Pro</option>
-                      </select>
-                    </div>
-
-                    {createUserRoleMutation.error ? (
-                      <p className="text-xs text-rose-500">{createUserRoleMutation.error.message}</p>
-                    ) : null}
-
-                    <Button
-                      className="w-full justify-center"
-                      onClick={() => createUserRoleMutation.mutate()}
-                      disabled={createUserRoleMutation.isPending}
+              {/* ─── User Modal ─── */}
+              {userModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setUserModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-md overflow-y-auto max-h-[90vh] rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button
+                      onClick={() => setUserModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition"
                     >
-                      {createUserRoleMutation.isPending ? 'Creating...' : 'Create User'}
-                    </Button>
-                  </div>
-                </Card>
+                      <X className="h-4 w-4" />
+                    </button>
 
-                {/* Role Explanations */}
-                <Card className="border border-rose-100 p-6 bg-white shadow-sm">
-                  <AdminSectionTitle
-                    eyebrow="Access Matrix"
-                    title="Role Module Scopes"
-                    description="List of visible modules based on role mapping rules."
-                  />
-                  <div className="mt-5 space-y-3 text-xs text-rose-950">
-                    {[
-                      { role: 'Super Admin', scope: 'Full access across all dashboard segments and simulator tools.' },
-                      { role: 'Admin', scope: 'Full access to manage users, catalog, scans, recommendations and settings.' },
-                      { role: 'User', scope: 'Standard access without admin panels. Can run scans and use subscription benefits.' },
-                    ].map((item) => (
-                      <div key={item.role} className="rounded-2xl border border-rose-50 bg-rose-50/20 px-3 py-2.5">
-                        <p className="font-semibold flex items-center gap-1.5">
-                          <UserCheck className="h-3.5 w-3.5 text-rose-500" />
-                          {item.role}
-                        </p>
-                        <p className="mt-1 text-[11px] text-mist">{item.scope}</p>
+                    <h2 className="font-display text-xl text-rose-950">
+                      {selectedUser ? 'Edit User' : 'Create New User'}
+                    </h2>
+
+                    <div className="space-y-4">
+                      {/* Edit mode: avatar + editable name */}
+                      {selectedUser && (
+                        <div className="space-y-3">
+                          {/* Avatar preview */}
+                          <div className="flex items-center gap-3 rounded-2xl bg-rose-50/50 border border-rose-100 px-4 py-3">
+                            {selectedUser.avatar_url ? (
+                              <img src={selectedUser.avatar_url} alt=""
+                                className="h-10 w-10 rounded-full border border-rose-100 object-cover shrink-0" />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0 text-rose-500 font-bold">
+                                {(selectedUser.email?.[0] ?? '?').toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs text-mist truncate">{selectedUser.email}</p>
+                            </div>
+                          </div>
+
+                          {/* Editable name fields */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">First Name</label>
+                              <Input
+                                placeholder="e.g. Jane"
+                                value={newUserFirstName}
+                                onChange={(e) => setNewUserFirstName(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Last Name</label>
+                              <Input
+                                placeholder="e.g. Doe"
+                                value={newUserLastName}
+                                onChange={(e) => setNewUserLastName(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Email — chỉ create */}
+                      {!selectedUser && (
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Email</label>
+                          <Input
+                            placeholder="e.g. client@lumina.ai"
+                            value={newUserEmail}
+                            onChange={(e) => setNewUserEmail(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Password — chỉ create */}
+                      {!selectedUser && (
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Password</label>
+                          <Input
+                            type="password"
+                            placeholder="Minimum 8 characters"
+                            value={newUserPassword}
+                            onChange={(e) => setNewUserPassword(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Role */}
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Access Level</label>
+                        <select
+                          className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                          value={newUserRole}
+                          onChange={(e) => setNewUserRole(e.target.value as any)}
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="user">Standard User</option>
+                        </select>
                       </div>
-                    ))}
+
+                      {/* Plan — select từ danh sách plans thật */}
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Subscription Plan</label>
+                        <select
+                          className="w-full rounded-2xl border border-rose-200/80 bg-white/85 px-4 py-3 text-sm text-pearl focus:border-cyan focus:outline-none focus:ring-2 focus:ring-cyan/25"
+                          value={newUserPlanId}
+                          onChange={(e) => {
+                            setNewUserPlanId(e.target.value)
+                            // sync slug cho createUserRoleMutation nếu cần
+                            const plan = (plansQuery.data ?? []).find((p: any) => p.id === e.target.value)
+                            setNewUserPlan((plan?.slug ?? 'free') as any)
+                          }}
+                        >
+                          <option value="">No Plan</option>
+                          {(plansQuery.data ?? []).map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} — ${Number(p.price).toFixed(2)}/{p.billing_interval}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {createUserRoleMutation.error && (
+                        <p className="text-sm text-rose-500">{createUserRoleMutation.error.message}</p>
+                      )}
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="ghost" onClick={() => setUserModalOpen(false)}>Cancel</Button>
+                        <Button
+                          onClick={async () => {
+                            if (selectedUser) {
+                              await updateUserPlanMutation.mutateAsync({
+                                userId: selectedUser.id,
+                                planId: newUserPlanId,
+                                role: newUserRole,
+                                firstName: newUserFirstName,
+                                lastName: newUserLastName,
+                              })
+                              setUserModalOpen(false)
+                            } else {
+                              await createUserRoleMutation.mutateAsync()
+                              if (newUserPlanId) {
+                                const newProfile = (usersQuery.data ?? []).find((u: any) => u.email === newUserEmail)
+                                if (newProfile) {
+                                  await updateUserPlanMutation.mutateAsync({
+                                    userId: newProfile.id,
+                                    planId: newUserPlanId,
+                                    role: newUserRole,
+                                    firstName: newUserFirstName,
+                                    lastName: newUserLastName,
+                                  })
+                                }
+                              }  // ← đóng if (newUserPlanId)
+                              setUserModalOpen(false)
+                            }  // ← đóng else
+                          }}  // ← đóng onClick
+                          disabled={
+                            createUserRoleMutation.isPending ||
+                            updateUserRoleMutation.isPending ||
+                            updateUserPlanMutation.isPending
+                          }
+                        >
+                          {createUserRoleMutation.isPending || updateUserRoleMutation.isPending
+                            ? 'Saving...'
+                            : selectedUser ? 'Save Changes' : 'Create User'}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </Card>
-              </div>
+                </div>
+              )}
             </div>
           ) : null}
           {activeSection === 'plans' && (

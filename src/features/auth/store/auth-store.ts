@@ -108,7 +108,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
           initialized: true,
         })
 
-        const subscription = authService.onAuthStateChange((_event, nextSession) => {
+        const subscription = authService.onAuthStateChange(async (_event, nextSession) => {
           applySessionFromAuthEvent(nextSession)
         })
 

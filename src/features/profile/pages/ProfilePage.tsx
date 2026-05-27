@@ -208,8 +208,8 @@ export default function ProfilePage() {
                   <dd className="mt-1 text-sm capitalize text-rose-950">{role}</dd>
                 </div>
                 <div className="rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3">
-                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-rose-600">Try-on credits</dt>
-                  <dd className="mt-1 text-sm text-rose-950">{profile?.try_on_credits ?? 0}</dd>
+                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-rose-600">Plan</dt>
+                  <dd className="mt-1 text-sm text-rose-950">{profile?.plan.name ?? 0}</dd>
                 </div>
                 <div className="rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3">
                   <dt className="text-[10px] font-semibold uppercase tracking-wide text-rose-600">Last sign in</dt>

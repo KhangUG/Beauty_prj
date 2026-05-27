@@ -20,7 +20,7 @@ export function useActiveSubscription() {
 
     supabase
       .from('subscriptions')
-      .select('plan_id, expires_at, current_period_end, status')
+      .select('plan_id, expires_at, status')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .order('created_at', { ascending: false })

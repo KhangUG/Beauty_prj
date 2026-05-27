@@ -225,7 +225,7 @@ export default function ProfilePage() {
                 Upgrade anytime to unlock more scans and longer history.
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link to="/checkout">
+                <Link to="/plans">
                   <Button>Manage plan</Button>
                 </Link>
                 <Link to="/scan">

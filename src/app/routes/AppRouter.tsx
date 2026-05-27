@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Loader } from '@/shared/components/ui/Loader'
 import { AppLayout } from '@/shared/components/layout/AppLayout'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
+import PlanPage from '@/features/plans/pages/PlanPage'
 
 const LandingPage = lazy(() => import('@/features/landing/pages/LandingPage'))
 const AIScanPage = lazy(() => import('@/features/ai-scan/pages/AIScanPage'))
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
       { path: '/scan', element: <AIScanPage /> },
       { path: '/recommendations', element: <RecommendationsPage /> },
       { path: '/products', element: <ProductsPage /> },
+      { path: '/plans', element: <PlanPage /> },
       { path: '/checkout', element: <CheckoutPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/auth', element: <AuthPage /> },

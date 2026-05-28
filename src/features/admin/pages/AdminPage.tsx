@@ -426,7 +426,9 @@ export default function AdminPage() {
   useEffect(() => {
     void testPing()
   }, [])
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [activeSection])
   // Queries
   const keysQuery = useQuery({
     queryKey: ['admin', 'api-keys'],
@@ -668,28 +670,41 @@ export default function AdminPage() {
         is_active: apiKeyForm.is_active,
       }
 
-      if (!payload.name) {
-        throw new Error('Please provide a product name before saving.')
-      }
-
-      if (!payload.key_value) {
-        throw new Error('Please select a api key value for the api key.')
-      }
+      if (!payload.name) throw new Error('Please provide a key name.')
+      if (!payload.key_value) throw new Error('Please provide a key value.')
 
       if (apiKeyForm.id) {
         return databaseService.updateApiKey(apiKeyForm.id, payload)
       }
-
       return databaseService.createApiKey(payload)
     },
     onSuccess: async () => {
       setApiKeyForm(EMPTY_FORM)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'api-keys'] })
-      await queryClient.invalidateQueries({ queryKey: ['catalog', 'api-keys'] })
-      await queryClient.invalidateQueries({ queryKey: ['landing', 'api-keys'] })
     },
   })
+  const toggleApiKeyActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      // Nếu đang set active = true → deactivate tất cả key khác cùng provider trước
+      if (is_active) {
+        const allKeys = keysQuery.data ?? []
+        const others = allKeys.filter((k: any) => k.id !== id)
 
+        // Set tất cả còn lại thành inactive
+        await Promise.all(
+          others.map((k: any) =>
+            databaseService.updateApiKey(k.id, { is_active: false })
+          )
+        )
+      }
+
+      // Sau đó update key được chọn
+      return databaseService.updateApiKey(id, { is_active })
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'api-keys'] })
+    },
+  })
   const deleteApiKeyMutation = useMutation({
     mutationFn: async (id: string) => databaseService.deleteApiKey(id),
     onSuccess: async () => {
@@ -2776,28 +2791,19 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-mist">{key.provider}</td>
                           <td className="py-3 px-3 font-mono">
                             <div className="flex items-center gap-2">
-                              <span className="text-mist">
-                                {visibleApiKeysIds.has(key.id)
-                                  ? (key.key_value ?? '••••••••••••••••')
-                                  : `${(key.key_value ?? '').slice(0, 3)}••••••••`}
+                              <span className="text-mist font-mono tracking-widest">
+                                ••••••••••••••••
                               </span>
-                              <button
-                                onClick={() => setVisibleApiKeysIds(prev => {
-                                  const next = new Set(prev)
-                                  next.has(key.id) ? next.delete(key.id) : next.add(key.id)
-                                  return next
-                                })}
-                                className="text-mist hover:text-rose-600 transition"
-                              >
-                                {visibleApiKeysIds.has(key.id)
-                                  ? <Key className="h-3.5 w-3.5 opacity-50" />
-                                  : <Key className="h-3.5 w-3.5" />}
-                              </button>
+                              <span className="text-[10px] text-mist/50 italic">hidden for security</span>
                             </div>
                           </td>
                           <td className="py-3 px-3">
                             <button
-                              onClick={() => saveApiKeyMutation.mutate()}
+                              onClick={() => toggleApiKeyActiveMutation.mutate({
+                                id: key.id,
+                                is_active: !key.is_active,
+                              })}
+                              disabled={toggleApiKeyActiveMutation.isPending}
                               className={cn(
                                 'rounded-full px-2.5 py-0.5 text-[10px] font-bold border transition',
                                 key.is_active
@@ -2805,7 +2811,7 @@ export default function AdminPage() {
                                   : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100',
                               )}
                             >
-                              {key.is_active ? 'Active' : 'Inactive'}
+                              {toggleApiKeyActiveMutation.isPending ? '...' : key.is_active ? 'Active' : 'Inactive'}
                             </button>
                           </td>
                           <td className="py-3 px-3 text-mist whitespace-nowrap">

@@ -2778,8 +2778,8 @@ export default function AdminPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-mist">
                                 {visibleApiKeysIds.has(key.id)
-                                  ? key.key_value
-                                  : key.key_value.slice(0, 6) + '••••••••' + key.key_value.slice(-4)}
+                                  ? (key.key_value ?? '••••••••••••••••')
+                                  : `${(key.key_value ?? '').slice(0, 3)}••••••••`}
                               </span>
                               <button
                                 onClick={() => setVisibleApiKeysIds(prev => {

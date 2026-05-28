@@ -18,9 +18,7 @@ import {
   Wrench,
   Activity,
   Wifi,
-  PlusCircle,
   Search,
-  Sliders,
   DollarSign,
   RefreshCw,
   UserCheck,
@@ -30,6 +28,7 @@ import {
   X,
   CreditCard,
   BadgeCheck,
+  Key,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -63,9 +62,19 @@ const sidebarSections: Array<{
     { id: 'access', label: 'Access', description: 'Roles and permissions', icon: Users },
     { id: 'plans', label: 'Plans', description: 'Manage subscription plans', icon: CreditCard },
     { id: 'subscriptions', label: 'Subscriptions', description: 'Manage user subscriptions', icon: BadgeCheck },
+    { id: 'api-keys', label: 'API Keys', description: 'Manage API Keys', icon: Key },
     { id: 'settings', label: 'Settings', description: 'Platform and environment', icon: Wrench },
     { id: 'revenue', label: 'Revenue', description: 'Orders and sales', icon: DollarSign },
   ]
+
+type ApiKeyFormState = {
+  id: string
+  name: string
+  key_value: string
+  provider: string
+  is_active: boolean
+}
+const EMPTY_FORM = { id: '', name: '', key_value: '', provider: 'virtual_makeup_ai', is_active: true }
 
 type ProductFormState = {
   id: string
@@ -76,19 +85,6 @@ type ProductFormState = {
   categoryId: string
   brand: string
 }
-
-// type ScanFormState = {
-//   id: string
-//   score: string
-//   metricsJson: string
-// }
-
-// type RecommendationFormState = {
-//   id: string
-//   scanId: string
-//   productId: string
-//   reason: string
-// }
 
 type CategoryFormState = {
   id: string
@@ -334,9 +330,6 @@ export default function AdminPage() {
   const [selectedAdminScan, setSelectedAdminScan]     = useState<any>(null)
   const ADMIN_SCAN_PAGE_SIZE = 10
 
-  const [recommendationSearch, setRecommendationSearch] = useState('')
-  const [recommendationCategoryFilter, setRecommendationCategoryFilter] = useState('All')
-
   const [userSearch, setUserSearch] = useState('')
 
   const [categoryPage, setCategoryPage] = useState(1)
@@ -360,6 +353,9 @@ export default function AdminPage() {
   const [planForm, setPlanForm] = useState(EMPTY_PLAN)
   const [selectedPlan, setSelectedPlan] = useState<any>(null)
 
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false)
+  const [apiKeyForm, setApiKeyForm] = useState(EMPTY_FORM)
+  const [visibleApiKeysIds, setVisibleApiKeysIds] = useState<Set<string>>(new Set())
 
   // Modal states — Products
   const [productModalOpen, setProductModalOpen] = useState(false)
@@ -432,6 +428,11 @@ export default function AdminPage() {
   }, [])
 
   // Queries
+  const keysQuery = useQuery({
+    queryKey: ['admin', 'api-keys'],
+    queryFn: () => databaseService.getAdminApiKeys(),
+  })
+
   const productsQuery = useQuery({
     queryKey: ['admin', 'products'],
     queryFn: () => databaseService.getAdminProducts(),
@@ -605,18 +606,6 @@ export default function AdminPage() {
     })
   }, [productsQuery.data, productSearch, productCategoryFilter, categoriesQuery.data])
 
-  // const filteredScans = useMemo(() => {
-  //   const list = scansQuery.data ?? []
-  //   return list.filter((s) => {
-  //     const matchesSearch =
-  //       s.id.toLowerCase().includes(scanSearch.toLowerCase()) ||
-  //       s.user_id.toLowerCase().includes(scanSearch.toLowerCase())
-  //     return matchesSearch
-  //   })
-  // }, [scansQuery.data, scanSearch])
-
-
-  
 
   const paginatedProducts = useMemo(() => {
     return filteredProducts.slice((productPage - 1) * productItemsPerPage, productPage * productItemsPerPage)
@@ -670,6 +659,46 @@ export default function AdminPage() {
   )
 
   // Mutations
+  const saveApiKeyMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        name: apiKeyForm.name.trim(),
+        key_value: apiKeyForm.key_value.trim() || null,
+        provider: apiKeyForm.provider.trim() || null,
+        is_active: apiKeyForm.is_active,
+      }
+
+      if (!payload.name) {
+        throw new Error('Please provide a product name before saving.')
+      }
+
+      if (!payload.key_value) {
+        throw new Error('Please select a api key value for the api key.')
+      }
+
+      if (apiKeyForm.id) {
+        return databaseService.updateApiKey(apiKeyForm.id, payload)
+      }
+
+      return databaseService.createApiKey(payload)
+    },
+    onSuccess: async () => {
+      setApiKeyForm(EMPTY_FORM)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'api-keys'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'api-keys'] })
+      await queryClient.invalidateQueries({ queryKey: ['landing', 'api-keys'] })
+    },
+  })
+
+  const deleteApiKeyMutation = useMutation({
+    mutationFn: async (id: string) => databaseService.deleteApiKey(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'api-keys'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'api-keys'] })
+      await queryClient.invalidateQueries({ queryKey: ['landing', 'api-keys'] })
+    },
+  })
+
   const saveProductMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -821,17 +850,7 @@ export default function AdminPage() {
       return databaseService.updateUserRole(userId, role)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      await useAuthStore.getState().initialize()
-    },
-  })
-
-  const updateUserSubscriptionTierMutation = useMutation({
-    mutationFn: async ({ userId, subscriptionTier }: { userId: string; subscriptionTier: string }) => {
-      return databaseService.updateUserSubscriptionTier(userId, subscriptionTier)
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'profiles'] })
       await useAuthStore.getState().initialize()
     },
   })
@@ -886,57 +905,6 @@ export default function AdminPage() {
     },
   })
 
-  // Scan Simulator Mutation
-  // const runSimulatorMutation = useMutation({
-  //   mutationFn: async () => {
-  //     const userId = targetUserId.trim() || currentAuthUser?.id || 'guest-user'
-
-
-  //     const scanResult: ScanResult = {
-
-  //     }
-
-  //     // Check if we can save to database
-  //     if (userId === 'guest-user' || !currentAuthUser) {
-  //       // Fallback to guest scans array in localStorage
-  //       const makeId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
-  //       const id = makeId()
-  //       const now = new Date().toISOString()
-  //       const products = productsQuery.data || []
-  //       const topProducts = products.slice(0, 3)
-
-  //       const recommendations = topProducts.map((p, idx) => ({
-  //         id: makeId(),
-  //         productId: p.id,
-  //         reason: `Simulated suggestion: suitable for ${idx === 0 ? 'hydration' : idx === 1 ? 'acne' : 'dark circles'} target`,
-  //       }))
-
-  //       const scan = { id, userId: null, result: scanResult, created_at: now, recommendations }
-  //       const existing = JSON.parse(localStorage.getItem('guest_scans') || '[]')
-  //       existing.unshift(scan)
-  //       localStorage.setItem('guest_scans', JSON.stringify(existing))
-  //       return id
-  //     }
-
-  //     // Real Supabase insert
-  //     const products = productsQuery.data || []
-  //     const topProducts = products.slice(0, 3)
-  //     const scanId = await databaseService.saveScan(userId, scanResult)
-
-  //     await databaseService.saveRecommendations(
-  //       scanId,
-  //       topProducts.map((product, idx) => ({
-  //         productId: product.id,
-  //         reason: `Simulated result for ${idx === 0 ? 'hydration' : idx === 1 ? 'acne' : 'dark circles'} target`,
-  //       })),
-  //     )
-  //     return scanId
-  //   },
-  //   onSuccess: async () => {
-  //     await queryClient.invalidateQueries({ queryKey: ['admin', 'scans'] })
-  //     await queryClient.invalidateQueries({ queryKey: ['admin', 'recommendations'] })
-  //   },
-  // })
 
   // Order & Revenue Mutations
   const updateOrderStatusMutation = useMutation({
@@ -2766,7 +2734,190 @@ export default function AdminPage() {
               )}
             </div>
           )}
+          {/* API KEYS TAB */}
+          {activeSection === 'api-keys' && (
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="bg-white border border-rose-100 rounded-3xl p-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-rose-950">
+                  {keysQuery.data?.length ?? 0} key(s) configured
+                </p>
+                <Button onClick={() => {
+                  setApiKeyForm(EMPTY_FORM)
+                  setApiKeyModalOpen(true)
+                }}>
+                  + Add Key
+                </Button>
+              </div>
 
+              {/* Table */}
+              <Card className="border border-rose-100 p-6 bg-white shadow-sm">
+                <AdminSectionTitle
+                  eyebrow="API Keys"
+                  title="Virtual Makeup AI Keys"
+                  description="Manage, rotate and enable/disable API keys used by the makeup engine."
+                />
+                <div className="mt-6 overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-rose-100 text-rose-950 font-bold uppercase tracking-wider">
+                        <th className="pb-3 pr-3">Name</th>
+                        <th className="pb-3 px-3">Provider</th>
+                        <th className="pb-3 px-3">Key Value</th>
+                        <th className="pb-3 px-3">Status</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Created</th>
+                        <th className="pb-3 pl-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-rose-50">
+                      {(keysQuery.data ?? []).map((key: any) => (
+                        <tr key={key.id} className="hover:bg-rose-50/20 text-rose-950 align-middle">
+                          <td className="py-3 pr-3 font-semibold">{key.name}</td>
+                          <td className="py-3 px-3 text-mist">{key.provider}</td>
+                          <td className="py-3 px-3 font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="text-mist">
+                                {visibleApiKeysIds.has(key.id)
+                                  ? key.key_value
+                                  : key.key_value.slice(0, 6) + '••••••••' + key.key_value.slice(-4)}
+                              </span>
+                              <button
+                                onClick={() => setVisibleApiKeysIds(prev => {
+                                  const next = new Set(prev)
+                                  next.has(key.id) ? next.delete(key.id) : next.add(key.id)
+                                  return next
+                                })}
+                                className="text-mist hover:text-rose-600 transition"
+                              >
+                                {visibleApiKeysIds.has(key.id)
+                                  ? <Key className="h-3.5 w-3.5 opacity-50" />
+                                  : <Key className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <button
+                              onClick={() => saveApiKeyMutation.mutate()}
+                              className={cn(
+                                'rounded-full px-2.5 py-0.5 text-[10px] font-bold border transition',
+                                key.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                                  : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100',
+                              )}
+                            >
+                              {key.is_active ? 'Active' : 'Inactive'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 text-mist whitespace-nowrap">
+                            {formatDate(key.created_at)}
+                          </td>
+                          <td className="py-3 pl-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                setApiKeyForm({
+                                  id: key.id,
+                                  name: key.name,
+                                  key_value: key.key_value,
+                                  provider: key.provider,
+                                  is_active: key.is_active,
+                                })
+                                setApiKeyModalOpen(true)
+                              }}>
+                                <PencilLine className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm" variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Delete key "${key.name}"?`)) {
+                                    deleteApiKeyMutation.mutate(key.id)
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(keysQuery.data?.length ?? 0) === 0 && (
+                    <div className="text-center py-12 text-mist text-sm">
+                      No API keys yet. Click "+ Add Key" to add one.
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Modal */}
+              {apiKeyModalOpen && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                  onClick={(e) => { if (e.target === e.currentTarget) setApiKeyModalOpen(false) }}
+                >
+                  <div className="relative w-full max-w-md rounded-[2rem] border border-rose-100 bg-white p-6 shadow-xl space-y-4">
+                    <button
+                      onClick={() => setApiKeyModalOpen(false)}
+                      className="absolute right-4 top-4 rounded-full p-1.5 text-mist hover:bg-rose-50 transition"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <h2 className="font-display text-xl text-rose-950">
+                      {apiKeyForm.key_value && keysQuery.data?.some((k: any) => k.key_value === apiKeyForm.key_value)
+                        ? 'Edit API Key' : 'Add API Key'}
+                    </h2>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Name</label>
+                        <Input
+                          placeholder="e.g. Production Key"
+                          value={apiKeyForm.name}
+                          onChange={(e) => setApiKeyForm(f => ({ ...f, name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Provider</label>
+                        <Input
+                          placeholder="e.g. virtual_makeup_ai"
+                          value={apiKeyForm.provider}
+                          onChange={(e) => setApiKeyForm(f => ({ ...f, provider: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">Key Value</label>
+                        <Input
+                          type="password"
+                          placeholder="Paste your API key here"
+                          value={apiKeyForm.key_value}
+                          onChange={(e) => setApiKeyForm(f => ({ ...f, key_value: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="key_active"
+                          checked={apiKeyForm.is_active}
+                          onChange={(e) => setApiKeyForm(f => ({ ...f, is_active: e.target.checked }))}
+                        />
+                        <label htmlFor="key_active" className="text-sm text-rose-950">Active</label>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="ghost" onClick={() => setApiKeyModalOpen(false)}>Cancel</Button>
+                        <Button
+                          onClick={async () => {
+                            await saveApiKeyMutation.mutateAsync()
+                            setApiKeyModalOpen(false)
+                          }}
+                        >
+                          Save Key
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           
           {/* SETTINGS TAB */}
           {activeSection === 'settings' ? (

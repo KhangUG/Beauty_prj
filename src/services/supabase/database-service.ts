@@ -22,6 +22,15 @@ export type AdminProductRecord = {
   created_at: string;
 };
 
+type AdminApiKeyRecord = {
+  id: string
+  name: string | null;
+  key_value: string | null;
+  provider: string | null;
+  is_active: boolean
+  created_at: string
+}
+
 export type AdminScanRecord = {
   id: string;
   created_at: string;
@@ -69,7 +78,11 @@ export type AdminUserProfileRecord = {
 
 type CreateProductInput = Omit<AdminProductRecord, "id" | "created_at">;
 
+type CreateApiKeyInput = Omit<AdminApiKeyRecord, "id" | "created_at">;
+
 type UpdateProductInput = Partial<CreateProductInput>;
+
+type UpdateApiKeyInput = Partial<CreateApiKeyInput>;
 
 type CreateRecommendationInput = {
   scanId: string;
@@ -198,6 +211,41 @@ export const databaseService = {
       .order("created_at", { ascending: false });
     if (error) throw error;
     return (data ?? []) as AdminProductRecord[];
+  },
+
+  async getAdminApiKeys() {
+    const { data, error } = await supabase
+      .from("api_keys")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as AdminApiKeyRecord[];
+  },
+
+  async createApiKey(input: CreateApiKeyInput) {
+    const { data, error } = await (supabase as any)
+      .from("api_keys")
+      .insert(input)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as AdminApiKeyRecord;
+  },
+
+  async updateApiKey(id: string, input: UpdateApiKeyInput) {
+    const { data, error } = await (supabase as any)
+      .from('api_keys')
+      .update(input)
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) throw error
+    return data as AdminApiKeyRecord
+  },
+
+  async deleteApiKey(id: string) {
+    const { error } = await supabase.from("api_keys").delete().eq("id", id);
+    if (error) throw error;
   },
 
   async createProduct(input: CreateProductInput) {

@@ -11,6 +11,7 @@ export type AdminSection =
   | "plans"
   | "subscriptions"
   | "access"
+  | "api-keys"
   | "settings"
   | "revenue";
 
@@ -22,6 +23,7 @@ const adminSections: AdminSection[] = [
   "scans",
   "plans",
   "access",
+  "api-keys",
   "settings",
   "revenue",
 ];

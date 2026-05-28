@@ -25,7 +25,7 @@ export type AdminProductRecord = {
 type AdminApiKeyRecord = {
   id: string
   name: string | null;
-  key_value: string | null;
+  key_value?: string | null;
   provider: string | null;
   is_active: boolean
   created_at: string
@@ -214,38 +214,35 @@ export const databaseService = {
   },
 
   async getAdminApiKeys() {
-    const { data, error } = await supabase
-      .from("api_keys")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []) as AdminApiKeyRecord[];
-  },
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, provider, is_active, created_at, updated_at') // ← bỏ key_value
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as Omit<AdminApiKeyRecord, 'key_value'>[]
+},
 
   async createApiKey(input: CreateApiKeyInput) {
-    const { data, error } = await (supabase as any)
-      .from("api_keys")
-      .insert(input)
-      .select("*")
-      .single();
-    if (error) throw error;
-    return data as AdminApiKeyRecord;
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      body: { action: 'create', payload: input }
+    })
+    if (error) throw error
+    return data
   },
 
   async updateApiKey(id: string, input: UpdateApiKeyInput) {
-    const { data, error } = await (supabase as any)
-      .from('api_keys')
-      .update(input)
-      .eq('id', id)
-      .select('*')
-      .single()
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      body: { action: 'update', id, payload: input }
+    })
     if (error) throw error
-    return data as AdminApiKeyRecord
+    return data
   },
 
   async deleteApiKey(id: string) {
-    const { error } = await supabase.from("api_keys").delete().eq("id", id);
-    if (error) throw error;
+    const { data, error } = await supabase.functions.invoke('manage-api-key', {
+      body: { action: 'delete', id }
+    })
+    if (error) throw error
   },
 
   async createProduct(input: CreateProductInput) {

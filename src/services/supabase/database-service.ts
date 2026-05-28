@@ -551,48 +551,29 @@ export const databaseService = {
   async createUserWithRole(
     email: string,
     password: string,
-    role: "admin" | "user",
-    subscriptionTier: string = "free",
+    firstName: string,
+    lastName: string,
+    role: 'admin' | 'user',
+    planId: string = '',
   ) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          role,
-          subscription_tier: subscriptionTier,
-        },
-      },
-    });
+    const { data, error } = await supabase.functions.invoke('create-user', {
+      body: { email, firstName, lastName, password, role, planId: planId || null },
+    })
 
-    if (error) throw error;
+    if (error) throw new Error(error.message)
+    if (data?.error) throw new Error(data.error)
 
-    const userId = data.user?.id ?? data.session?.user?.id;
-    if (!userId) {
-      throw new Error("Failed to create new Supabase user account.");
-    }
-
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        role,
-        subscription_tier: subscriptionTier,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId)
-      .select("id, email, role, subscription_tier, updated_at")
-      .single();
-
-    if (profileError) throw profileError;
-
-    return {
-      ...profileData,
-      created_at: profileData.updated_at,
-    };
+    return data
   },
 
   async deleteUserRole(userId: string) {
-    return this.updateUserRole(userId, "user");
+    const { data, error } = await supabase.functions.invoke('delete-user', {
+      body: { userId },
+    })
+
+    if (error) throw new Error(error.message)
+    if (data?.error) throw new Error(data.error)
+    return data
   },
 
   getOrders(): OrderRecord[] {

@@ -844,12 +844,21 @@ export default function AdminPage() {
       if (!newUserPassword || newUserPassword.length < 8) {
         throw new Error('Password must be at least 8 characters.')
       }
-      return databaseService.createUserWithRole(newUserEmail, newUserPassword, newUserRole, newUserPlan)
+      return databaseService.createUserWithRole(
+        newUserEmail,
+        newUserPassword,
+        newUserFirstName,
+        newUserLastName,
+        newUserRole as 'admin' | 'user',
+        newUserPlanId,
+      )
     },
     onSuccess: async () => {
       setNewUserEmail('')
       setNewUserPassword('')
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      setNewUserPlanId('')
+      setUserModalOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'profiles'] })
     },
   })
 
@@ -858,7 +867,7 @@ export default function AdminPage() {
       return databaseService.deleteUserRole(userId)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'profiles'] })
       await useAuthStore.getState().initialize()
     },
   })
@@ -2279,7 +2288,7 @@ export default function AdminPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => {
-                                    if (confirm(`Remove custom role of ${item.email}?`)) {
+                                    if (confirm(`Delete account ${item.email}? This action cannot be undone.`)) {
                                       deleteUserRoleMutation.mutate(item.id)
                                     }
                                   }}
@@ -2382,6 +2391,28 @@ export default function AdminPage() {
                         </div>
                       )}
 
+                      {!selectedUser && (
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">FirstName</label>
+                          <Input
+                            placeholder="FirstName"
+                            value={newUserFirstName}
+                            onChange={(e) => setNewUserFirstName(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {!selectedUser && (
+                        <div>
+                          <label className="text-xs font-semibold text-rose-950 uppercase tracking-wide block mb-1">LastName</label>
+                          <Input
+                            placeholder="LastName"
+                            value={newUserLastName}
+                            onChange={(e) => setNewUserLastName(e.target.value)}
+                          />
+                        </div>
+                      )}
+
                       {/* Email — chỉ create */}
                       {!selectedUser && (
                         <div>
@@ -2461,18 +2492,6 @@ export default function AdminPage() {
                               setUserModalOpen(false)
                             } else {
                               await createUserRoleMutation.mutateAsync()
-                              if (newUserPlanId) {
-                                const newProfile = (usersQuery.data ?? []).find((u: any) => u.email === newUserEmail)
-                                if (newProfile) {
-                                  await updateUserPlanMutation.mutateAsync({
-                                    userId: newProfile.id,
-                                    planId: newUserPlanId,
-                                    role: newUserRole,
-                                    firstName: newUserFirstName,
-                                    lastName: newUserLastName,
-                                  })
-                                }
-                              }  // ← đóng if (newUserPlanId)
                               setUserModalOpen(false)
                             }  // ← đóng else
                           }}  // ← đóng onClick
